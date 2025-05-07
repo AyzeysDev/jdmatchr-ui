@@ -1,10 +1,10 @@
-# matchwise-ui
-💼 MatchWise UI – A free and open-source resume and job description analyzer built with Next.js. Instantly compare your resume with any JD and get improvement tips.
+# jdmatchr-ui
+💼 JDMatchR UI – A free and open-source resume and job description analyzer built with Next.js. Instantly compare your resume with any JD and get improvement tips.
 
 
-# 🎯 MatchWise UI — Resume & JD Analyzer (Frontend)
+# 🎯 JDMatchR UI — Resume & JD Analyzer (Frontend)
 
-**MatchWise** is a free, open-source web app that helps job seekers compare their resumes against job descriptions. This is the **frontend** built with **Next.js**, styled using **MUI**, and designed to be highly responsive and production-grade.
+**JDMatchR** is a free, open-source web app that helps job seekers compare their resumes against job descriptions. This is the **frontend** built with **Next.js**, styled using **MUI**, and designed to be highly responsive and production-grade.
 
 ---
 
