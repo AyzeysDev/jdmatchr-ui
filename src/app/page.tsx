@@ -30,7 +30,7 @@ export default function LandingPage() {
             </p>
             {/* Corrected Button with asChild and nested Link */}
             <Button asChild size="lg" className="px-8 py-3 text-lg font-semibold rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-              <Link href="/login">Log in to Get Started</Link>
+              <Link href="/login">Get Started Now</Link>
             </Button>
           </div>
 
