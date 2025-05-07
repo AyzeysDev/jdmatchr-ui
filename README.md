@@ -25,7 +25,7 @@
 | Layer        | Stack                                           |
 |--------------|-------------------------------------------------|
 | Framework    | [Next.js 14 (App Router)](https://nextjs.org/)  |
-| Styling      | [MUI](https://mui.com/) + CSS Modules           |
+| Styling      | shadcnui + CSS Modules           |
 | Routing      | Page-based routing via `app/` directory         |
 | State Mgmt   | React Context + useReducer (auth, match state)  |
 | PDF Parsing  | `pdfjs-dist`, custom parser                     |
