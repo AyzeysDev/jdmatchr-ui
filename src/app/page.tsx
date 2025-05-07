@@ -1,6 +1,6 @@
 // src/app/page.tsx
 import Link from 'next/link';
-import Image from 'next/image';
+// import Image from 'next/image';
 import Navbar from '@/components/common/Navbar'; // Assuming Navbar.tsx is in src/components/common/
 import Footer from '@/components/common/Footer'; // Assuming Footer.tsx is in src/components/common/
 import { Button } from '@/components/ui/button';   // Assuming you've added button via shadcn/ui
@@ -12,7 +12,7 @@ export default function LandingPage() {
 
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="relative text-center pt-20 pb-28 md:pt-28 md:pb-36 lg:pt-32 lg:pb-48 bg-gradient-to-b from-sky-50 to-slate-50 overflow-hidden">
+        <section id="hero-section" className="relative text-center pt-20 pb-28 md:pt-28 md:pb-36 lg:pt-32 lg:pb-48 bg-gradient-to-b from-sky-50 to-slate-50 overflow-hidden">
           {/* Background elements can be added here if needed, e.g., subtle patterns or shapes */}
           
           <div className="container mx-auto px-6 sm:px-8 z-10 relative">
@@ -22,26 +22,9 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-slate-600 max-w-xl md:max-w-2xl mx-auto mb-10">
               Quickly compare your resume against any job description and get actionable insights to land your dream job.
             </p>
-            <Link href="/login"> {/* Or /signup if that's the primary CTA */}
-              <Button size="lg" className="px-8 py-3 text-lg font-semibold rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
-                Log in to Get Started
-              </Button>
-            </Link>
-          </div>
-
-          {/* Wavy Graphic Implementation at the bottom of the section */}
-          <div 
-            className="absolute -bottom-1 left-0 w-full h-[100px] md:h-[150px] lg:h-[180px]" // Adjusted height and negative bottom for overlap
-            style={{ zIndex: 5 }} // Ensure wave is above background but below content if necessary
-          >
-            <Image 
-              src="/wavy-dash-svgrepo-com.svg" 
-              alt="Decorative wave pattern" 
-              layout="fill" 
-              objectFit="cover" // 'cover' will fill the container, might crop. 'contain' fits, 'fill' stretches.
-              objectPosition="bottom" // Ensures the bottom of the SVG aligns with the bottom of the div
-              priority // Good for LCP elements (Largest Contentful Paint)
-            />
+            <Button size="lg" className="px-8 py-3 text-lg font-semibold rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+              <Link href="/login">Log in to Get Started</Link>
+          </Button>
           </div>
         </section>
 
