@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginFormSchema, type LoginFormValues } from '@/lib/validators';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // For redirecting after login
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,11 +20,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
+import OAuthButtons from './OAuthButtons'; // Import the OAuthButtons component
 
 export default function LoginForm() {
+  const router = useRouter();
   const [error, setError] = useState<string | undefined>("");
-  const [success, setSuccess] = useState<string | undefined>(""); // Or for 2FA prompts
-  const [isPending, startTransition] = useTransition();
+  // Success message might not be needed if redirecting immediately
+  // const [success, setSuccess] = useState<string | undefined>("");
+  const [isCredentialsPending, startCredentialsTransition] = useTransition();
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(LoginFormSchema),
@@ -33,42 +37,51 @@ export default function LoginForm() {
     },
   });
 
-  const onSubmit = (values: LoginFormValues) => {
+  // Handler for email/password form submission
+  const onCredentialsSubmit = (values: LoginFormValues) => {
     setError("");
-    setSuccess("");
-    startTransition(async () => {
-      console.log("Login form submitted:", values);
+    // setSuccess(""); // Not needed if redirecting
+
+    startCredentialsTransition(async () => {
+      console.log("Credentials login form submitted:", values);
       try {
-        const response = await fetch('/api/auth/login', { // Placeholder Next.js API route
+        // This is where you'd call NextAuth's signIn with 'credentials'
+        // or your custom Next.js API route that calls Spring Boot for credentials.
+        // For now, we'll simulate the call to the placeholder Next.js API route.
+        const response = await fetch('/api/auth/login', { // Your placeholder API route
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(values),
         });
+
         const data = await response.json();
+
         if (!response.ok) {
           setError(data.message || "Invalid email or password.");
         } else {
-          setSuccess(data.message || "Login successful! Redirecting...");
-          form.reset();
-          // TODO: Implement actual session handling and redirect
-          console.log("Login successful, token (mocked):", data.token);
+          // On successful login with credentials, NextAuth (if configured for credentials)
+          // would handle session creation. Or your custom logic would.
+          // Then redirect.
+          console.log("Credentials login successful (mocked):", data);
+          router.push('/analyze'); // Redirect to dashboard
         }
       } catch (err) {
-        setError("Failed to connect to the server.");
-        console.error("Login error:", err);
+        setError("Failed to connect to the server. Please try again later.");
+        console.error("Credentials login error:", err);
       }
     });
   };
 
   return (
-    <div className="w-full space-y-6"> 
-      <div className="text-center md:text-left"> 
+    <div className="w-full space-y-6">
+      <div className="text-center md:text-left">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Welcome Back!</h1>
         <p className="text-muted-foreground">Login to your account to continue.</p>
       </div>
 
+      {/* Email/Password Form */}
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4"> {/* Form fields spacing */}
+        <form onSubmit={form.handleSubmit(onCredentialsSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="email"
@@ -76,7 +89,7 @@ export default function LoginForm() {
               <FormItem>
                 <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="john.doe@example.com" {...field} disabled={isPending} />
+                  <Input type="email" placeholder="john.doe@example.com" {...field} disabled={isCredentialsPending} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -89,15 +102,15 @@ export default function LoginForm() {
               <FormItem>
                 <div className="flex items-center justify-between">
                   <FormLabel>Password</FormLabel>
-                  <Link href="/forgot-password" // Placeholder for forgot password page
+                  <Link href="/forgot-password"
                         className="text-sm font-medium text-primary hover:underline"
-                        tabIndex={-1} // Optional: manage focus order
+                        tabIndex={-1}
                   >
                     Forgot password?
                   </Link>
                 </div>
                 <FormControl>
-                  <Input type="password" placeholder="********" {...field} disabled={isPending} />
+                  <Input type="password" placeholder="********" {...field} disabled={isCredentialsPending} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -111,21 +124,29 @@ export default function LoginForm() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          {success && (
-             <Alert variant="default" className="bg-green-100 dark:bg-green-900 border-green-500 text-green-700 dark:text-green-300">
-              <Terminal className="h-4 w-4" />
-              <AlertTitle>Success</AlertTitle>
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
-          )}
+          {/* Success message might be removed if redirecting immediately */}
 
-          <Button type="submit" className="w-full" disabled={isPending}>
-            {isPending ? "Logging in..." : "Login"}
+          <Button type="submit" className="w-full" disabled={isCredentialsPending}>
+            {isCredentialsPending ? "Logging in..." : "Login with Email"}
           </Button>
         </form>
       </Form>
 
-      <p className="text-center text-sm text-muted-foreground">
+      {/* "Or continue with" Divider and OAuth Buttons */}
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-slate-50 dark:bg-slate-900 px-2 text-muted-foreground">
+            Or continue with
+          </span>
+        </div>
+      </div>
+      <OAuthButtons />
+
+      {/* Link to Signup Page */}
+      <p className="text-center text-sm text-muted-foreground pt-4">
         Don&apos;t have an account?{' '}
         <Link href="/signup" className="font-semibold text-primary hover:underline">
           Sign Up

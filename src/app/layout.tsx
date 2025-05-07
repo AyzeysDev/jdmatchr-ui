@@ -1,7 +1,9 @@
 // src/app/layout.tsx
 import { Geist, Geist_Mono } from "next/font/google"; // Corrected import for Geist fonts
 import "./globals.css";
-import { ThemeProvider } from '@/contexts/ThemeProvider'; // Adjust path if needed
+// import { ThemeProvider } from '@/contexts/ThemeProvider'; // Adjust path if needed
+// import { SessionProvider } from "next-auth/react";
+import Providers from "@/components/providers"; 
 
 // Initialize Geist Sans font with variable and subsets
 const geistSans = Geist({
@@ -41,14 +43,9 @@ export default function RootLayout({
         // },
       >
         {/* ThemeProvider wraps the children to enable theme switching */}
-        <ThemeProvider
-          attribute="class" // Applies theme by adding a class to the html tag (e.g., "dark")
-          defaultTheme="system" // Default theme based on user's system preference
-          enableSystem // Allows users to choose "system" preference
-          disableTransitionOnChange // Prevents transitions during theme change to avoid flashes
-        >
+        <Providers>
           {children}
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
