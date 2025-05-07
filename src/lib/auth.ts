@@ -1,17 +1,12 @@
 // src/lib/auth.ts
 import { type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
-import GitHubProvider from "next-auth/providers/github";
 
 export const authOptions: NextAuthOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string, // Ensure this is set in .env.local
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string, // Ensure this is set in .env.local
-    }),
-    GitHubProvider({
-      clientId: process.env.GITHUB_CLIENT_ID as string, // Ensure this is set in .env.local
-      clientSecret: process.env.GITHUB_CLIENT_SECRET as string, // Ensure this is set in .env.local
     }),
     // Add CredentialsProvider here later if needed for email/password
   ],

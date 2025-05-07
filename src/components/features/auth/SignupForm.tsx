@@ -137,7 +137,7 @@ export default function SignupForm() {
             </Alert>
           )}
 
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <Button type="submit" className="w-full cursor-pointer" disabled={isPending}>
             {isPending ? "Creating Account..." : "Create an Account"}
           </Button>
         </form>

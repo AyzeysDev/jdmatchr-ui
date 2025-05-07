@@ -126,7 +126,7 @@ export default function LoginForm() {
           )}
           {/* Success message might be removed if redirecting immediately */}
 
-          <Button type="submit" className="w-full" disabled={isCredentialsPending}>
+          <Button type="submit" className="w-full cursor-pointer" disabled={isCredentialsPending}>
             {isCredentialsPending ? "Logging in..." : "Login with Email"}
           </Button>
         </form>
