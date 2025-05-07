@@ -24,8 +24,19 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 To learn more about Next.js, take a look at the following resources:
 
+<<<<<<< HEAD
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+=======
+| Layer        | Stack                                           |
+|--------------|-------------------------------------------------|
+| Framework    | [Next.js 14 (App Router)](https://nextjs.org/)  |
+| Styling      | shadcnui + CSS Modules           |
+| Routing      | Page-based routing via `app/` directory         |
+| State Mgmt   | React Context + useReducer (auth, match state)  |
+| PDF Parsing  | `pdfjs-dist`, custom parser                     |
+| Auth         | JWT for session + OAuth (Google, GitHub)        |
+>>>>>>> d2832156050f8d64eadf3d370f8b31f680de1a4b
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
