@@ -63,7 +63,7 @@ export default function LoginForm() {
           // would handle session creation. Or your custom logic would.
           // Then redirect.
           console.log("Credentials login successful (mocked):", data);
-          router.push('/analyze'); // Redirect to dashboard
+          router.push('/home'); // Redirect to dashboard
         }
       } catch (err) {
         setError("Failed to connect to the server. Please try again later.");

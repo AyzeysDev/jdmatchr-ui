@@ -17,7 +17,7 @@ export default function OAuthButtons() {
     try {
       // callbackUrl: Redirect to this page after successful OAuth login.
       // Adjust as needed, e.g., to your dashboard.
-      await signIn(provider, { callbackUrl: "/analyze" });
+      await signIn(provider, { callbackUrl: "/home" });
       // Note: signIn redirects, so code after it might not run if successful.
     } catch (error) {
       console.error(`OAuth sign-in error with ${provider}:`, error);

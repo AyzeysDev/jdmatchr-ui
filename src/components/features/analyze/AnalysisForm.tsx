@@ -2,8 +2,8 @@
 
 import React, { useState, useTransition, useRef, useEffect } from "react";
 import { useForm, type SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod"; // Import Resolver type
-import { AnalysisFormSchema } from "@/lib/validators";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -20,53 +20,93 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, UploadCloud, FileText as FileIcon, XCircle } from "lucide-react";
 
-type AnalysisFormInput = {
-  jobTitle: string;
-  resumeFile?: FileList;
-  jobDescription: string;
-};
+// Simplified Zod Schema - temporarily removes complex file validation
+// We'll handle basic file presence check in the component/submit logic
+const SimpleAnalysisFormSchema = z.object({
+  jobTitle: z.string()
+    .min(3, { message: "Job title must be at least 3 characters." })
+    .max(100, { message: "Job title must be 100 characters or less." })
+    .trim(),
+  // Keep resumeFile as 'any' for now to bypass complex Zod/RHF file issues temporarily
+  // We will validate its presence manually in onSubmit
+  resumeFile: z.any().optional(), // Make optional in schema, check manually later
+  jobDescription: z.string()
+    .min(50, { message: "Job description must be at least 50 characters." })
+    .max(10000, { message: "Job description is too long (max 10,000 characters)." })
+    .trim(),
+});
+
+// Type based on the simplified schema
+type SimpleAnalysisFormValues = z.infer<typeof SimpleAnalysisFormSchema>;
 
 export default function AnalysisForm() {
   const router = useRouter();
   const [error, setError] = useState<string | undefined>("");
-  const [fileName, setFileName] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const form = useForm<AnalysisFormInput>({
-    resolver: zodResolver(AnalysisFormSchema) as Resolver<AnalysisFormInput>, // Explicitly cast resolver
+  const form = useForm<SimpleAnalysisFormValues>({
+    resolver: zodResolver(SimpleAnalysisFormSchema),
     defaultValues: {
       jobTitle: "",
-      resumeFile: undefined,
+      resumeFile: undefined, // Default value for file input
       jobDescription: "",
     },
     mode: "onChange",
   });
 
+  // Watch the resumeFile field to update the displayed file name
   const resumeFileWatcher = form.watch("resumeFile");
   useEffect(() => {
-    if (resumeFileWatcher instanceof FileList && resumeFileWatcher.length > 0) {
-      setFileName(resumeFileWatcher[0].name);
+    const fileList = resumeFileWatcher as FileList | undefined; // RHF stores it as FileList
+    if (fileList && fileList.length > 0) {
+      setFileName(fileList[0].name);
     } else {
       setFileName(null);
     }
   }, [resumeFileWatcher]);
 
-  const onSubmit: SubmitHandler<AnalysisFormInput> = (values) => {
+  // Function to clear the selected file
+  const handleClearFile = () => {
+    form.resetField("resumeFile"); // Reset RHF field
+    setFileName(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""; // Clear the native file input
+    }
+  };
+
+  // Handle form submission
+  const onSubmit: SubmitHandler<SimpleAnalysisFormValues> = (values) => {
     setError("");
     console.log("Analysis form submitted with values:", values);
+
+    // Manual check for file presence
+    const resumeFileList = values.resumeFile as FileList | undefined;
+    if (!resumeFileList || resumeFileList.length === 0) {
+      setError("Please upload a resume file.");
+      // Optionally set error specifically for the field
+      form.setError("resumeFile", { type: "manual", message: "Resume file is required." });
+      return;
+    }
+    const resumeFile = resumeFileList[0];
+
+    // Basic file type/size check (optional here, can be done server-side too)
+    if (resumeFile.type !== "application/pdf") {
+        setError("Invalid file type. Only PDF resumes are accepted.");
+        form.setError("resumeFile", { type: "manual", message: "Only PDF files are accepted." });
+        return;
+    }
+    if (resumeFile.size > 5 * 1024 * 1024) { // 5MB
+        setError("Resume file size must be less than 5MB.");
+        form.setError("resumeFile", { type: "manual", message: "File must be less than 5MB." });
+        return;
+    }
 
     startTransition(async () => {
       const formData = new FormData();
       formData.append("jobTitle", values.jobTitle);
-
-      if (values.resumeFile instanceof FileList && values.resumeFile.length > 0) {
-        formData.append("resumeFile", values.resumeFile[0], values.resumeFile[0].name);
-      } else {
-        setError("Invalid resume file data.");
-        return;
-      }
-
+      formData.append("resumeFile", resumeFile, resumeFile.name); // Append the actual File
       formData.append("jobDescription", values.jobDescription);
 
       try {
@@ -80,6 +120,8 @@ export default function AnalysisForm() {
         if (!response.ok) {
           setError(resultData.message || `Analysis failed: ${response.statusText}`);
         } else {
+          console.log("Analysis successful (mocked):", resultData);
+          // TODO: Store resultData in context/state management
           router.push("/insights");
         }
       } catch (err) {
@@ -89,17 +131,10 @@ export default function AnalysisForm() {
     });
   };
 
-  const handleClearFile = () => {
-    form.resetField("resumeFile");
-    setFileName(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        {/* Job Title Field */}
         <FormField
           control={form.control}
           name="jobTitle"
@@ -119,6 +154,7 @@ export default function AnalysisForm() {
           )}
         />
 
+        {/* Resume Upload Field */}
         <FormField
           control={form.control}
           name="resumeFile"
@@ -133,15 +169,16 @@ export default function AnalysisForm() {
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     accept=".pdf"
                     onChange={(e) => {
-                      if (e.target.files) {
-                        onChange(e.target.files);
+                      const files = e.target.files;
+                      if (files) {
+                        onChange(files); // Pass FileList to RHF
                       }
                     }}
                     onBlur={onBlur}
                     name={name}
                     ref={(e) => {
-                      ref(e);
-                      fileInputRef.current = e as HTMLInputElement;
+                      ref(e); // RHF's ref
+                      fileInputRef.current = e; // Local ref
                     }}
                     disabled={isPending}
                   />
@@ -165,6 +202,7 @@ export default function AnalysisForm() {
                       >
                         {fileName}
                       </p>
+                      <p className="text-xs text-muted-foreground">PDF file selected</p>
                       <Button
                         type="button"
                         variant="ghost"
@@ -184,6 +222,7 @@ export default function AnalysisForm() {
           )}
         />
 
+        {/* Job Description Field */}
         <FormField
           control={form.control}
           name="jobDescription"
@@ -203,6 +242,7 @@ export default function AnalysisForm() {
           )}
         />
 
+        {/* Error Message Display Area */}
         {error && (
           <Alert variant="destructive">
             <Terminal className="h-4 w-4" />
@@ -211,6 +251,7 @@ export default function AnalysisForm() {
           </Alert>
         )}
 
+        {/* Submit Button */}
         <Button type="submit" size="lg" className="w-full text-lg cursor-pointer" disabled={isPending}>
           {isPending ? "Analyzing..." : "Analyze Now"}
         </Button>

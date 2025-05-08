@@ -22,13 +22,10 @@ export default function InsightsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // --- Mocked Data (Replace with Context/State) ---
-  // In a real scenario, you'd get this from your context provider.
-  // If context is empty (e.g., user navigated directly), redirect back or show error.
   const [mockResults, setMockResults] = useState<AnalysisResult | null>(null);
 
   useEffect(() => {
     // Simulate fetching/checking context data
-    // Replace this with: if (!analysisResults) { router.replace('/analyze'); } else { setIsLoading(false); }
     const timer = setTimeout(() => {
       setMockResults({
         atsScore: 82,
@@ -50,39 +47,35 @@ export default function InsightsPage() {
 
     return () => clearTimeout(timer); // Cleanup timer
 
-    // Dependency array should include analysisResults when using context
-  }, [router]); // Added router to dependency array for the redirect logic (if implemented)
+  }, [router]);
 
-  // Handle case where results are not available (e.g., direct navigation)
-  // Or while loading
   if (isLoading || !mockResults) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-         {/* You can replace this with a Skeleton loader component */}
          <p className="text-muted-foreground">Loading analysis results...</p>
       </div>
     );
   }
 
-  // Use the actual results once context is implemented: const results = analysisResults;
   const results = mockResults; // Using mocked data for now
 
   const handleGoBack = () => {
-    // Optional: Clear results from context if needed when going back
-    // clearAnalysisResults?.();
+    // clearAnalysisResults?.(); // Optional: Clear results from context
     router.push('/analyze'); // Navigate back to the analyze page
   };
 
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
+      {/* Header section with Title and Back Button */}
+      <div className="flex items-center justify-between gap-4"> {/* Added gap-4 */}
         <div>
           <h1 className="text-3xl md:text-4xl font-bold text-foreground">Analysis Insights</h1>
           <p className="text-lg text-muted-foreground mt-1">
             Here&apos;s the breakdown of your resume against the job description.
           </p>
         </div>
-        <Button variant="outline" onClick={handleGoBack}>
+        {/* Added cursor-pointer directly to the Button */}
+        <Button variant="outline" onClick={handleGoBack} className="cursor-pointer shrink-0"> {/* Added shrink-0 */}
           <ArrowLeft className="mr-2 h-4 w-4" />
           Analyze Another
         </Button>
@@ -93,7 +86,6 @@ export default function InsightsPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">ATS Match Score</CardTitle>
-            {/* Add an icon here later if desired */}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{results.atsScore ?? 'N/A'}%</div>
@@ -113,7 +105,6 @@ export default function InsightsPage() {
             </p>
           </CardContent>
         </Card>
-         {/* Add more cards here if needed */}
       </div>
 
       {/* Suggestions Section */}
