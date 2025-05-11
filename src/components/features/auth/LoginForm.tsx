@@ -6,7 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { LoginFormSchema, type LoginFormValues } from '@/lib/validators';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // For redirecting after login
+import { useRouter, useSearchParams } from 'next/navigation'; // Import useSearchParams
+import { signIn } from "next-auth/react"; // <--- Import signIn from NextAuth
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,13 +21,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from 'lucide-react';
-import OAuthButtons from './OAuthButtons'; // Import the OAuthButtons component
+import OAuthButtons from './OAuthButtons';
 
 export default function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Get search params for callbackUrl
+  // Get callbackUrl from query parameters, default to '/home' if not present
+  const callbackUrl = searchParams.get('callbackUrl') || '/home';
+
   const [error, setError] = useState<string | undefined>("");
-  // Success message might not be needed if redirecting immediately
-  // const [success, setSuccess] = useState<string | undefined>("");
   const [isCredentialsPending, startCredentialsTransition] = useTransition();
 
   const form = useForm<LoginFormValues>({
@@ -39,35 +42,47 @@ export default function LoginForm() {
 
   // Handler for email/password form submission
   const onCredentialsSubmit = (values: LoginFormValues) => {
-    setError("");
-    // setSuccess(""); // Not needed if redirecting
+    setError(""); // Clear previous errors
 
     startCredentialsTransition(async () => {
-      console.log("Credentials login form submitted:", values);
+      console.log("[LoginForm] Attempting NextAuth credentials sign-in with:", values);
       try {
-        // This is where you'd call NextAuth's signIn with 'credentials'
-        // or your custom Next.js API route that calls Spring Boot for credentials.
-        // For now, we'll simulate the call to the placeholder Next.js API route.
-        const response = await fetch('/api/auth/login', { // Your placeholder API route
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(values),
+        // Use NextAuth's signIn function for credentials
+        const result = await signIn('credentials', {
+          redirect: false, // We'll handle redirect manually to show errors
+          email: values.email,
+          password: values.password,
+          // callbackUrl is not directly used by 'credentials' like this,
+          // but NextAuth might pick it up if redirect was true.
+          // We will redirect manually on success.
         });
 
-        const data = await response.json();
+        console.log("[LoginForm] NextAuth signIn result:", result);
 
-        if (!response.ok) {
-          setError(data.message || "Invalid email or password.");
+        if (result?.error) {
+          // 'result.error' will contain the message from your 'authorize' function's throw new Error()
+          // or a generic NextAuth.js error message (e.g., "CredentialsSignin").
+          // You might want to map "CredentialsSignin" to a more user-friendly message.
+          if (result.error === "CredentialsSignin") {
+            setError("Invalid email or password. Please try again.");
+          } else {
+            setError(result.error);
+          }
+          console.error("[LoginForm] NextAuth Credentials SignIn Error:", result.error);
+        } else if (result?.ok && !result?.error) {
+          // Successful login, NextAuth has set the session cookie
+          console.log("[LoginForm] NextAuth Credentials SignIn Successful.");
+          // Redirect to the callbackUrl (from query param) or default to '/home'
+          router.push(callbackUrl);
+          router.refresh(); // Optional: refresh server components if needed
         } else {
-          // On successful login with credentials, NextAuth (if configured for credentials)
-          // would handle session creation. Or your custom logic would.
-          // Then redirect.
-          console.log("Credentials login successful (mocked):", data);
-          router.push('/home'); // Redirect to dashboard
+          // Fallback for unexpected result structure
+          setError("An unknown login error occurred. Please try again.");
+          console.warn("[LoginForm] Unknown NextAuth signIn result structure:", result);
         }
-      } catch (err) {
-        setError("Failed to connect to the server. Please try again later.");
-        console.error("Credentials login error:", err);
+      } catch (err) { // Catch network errors or unexpected issues with the signIn call itself
+        setError("Failed to connect to the login service. Please check your internet connection and try again.");
+        console.error("[LoginForm] Error calling NextAuth signIn:", err);
       }
     });
   };
@@ -102,7 +117,7 @@ export default function LoginForm() {
               <FormItem>
                 <div className="flex items-center justify-between">
                   <FormLabel>Password</FormLabel>
-                  <Link href="/forgot-password"
+                  <Link href="/forgot-password" // Assuming you might add this page later
                         className="text-sm font-medium text-primary hover:underline"
                         tabIndex={-1}
                   >
@@ -120,11 +135,10 @@ export default function LoginForm() {
           {error && (
             <Alert variant="destructive">
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Error</AlertTitle>
+              <AlertTitle>Login Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          {/* Success message might be removed if redirecting immediately */}
 
           <Button type="submit" className="w-full cursor-pointer" disabled={isCredentialsPending}>
             {isCredentialsPending ? "Logging in..." : "Login with Email"}
@@ -138,7 +152,7 @@ export default function LoginForm() {
           <span className="w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-slate-50 dark:bg-slate-900 px-2 text-muted-foreground">
+          <span className="bg-background px-2 text-muted-foreground"> {/* Use bg-background for theme adaptability */}
             Or continue with
           </span>
         </div>
