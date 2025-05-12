@@ -6,8 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { SignupFormSchema, type SignupFormValues } from '@/lib/validators';
 import Link from 'next/link';
-// Optional: useRouter if you want to redirect after successful signup, e.g., to login page
-// import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
+import { signIn } from "next-auth/react"; // <--- Import signIn for auto-login
 
 import { Button } from "@/components/ui/button";
 import {
@@ -20,10 +20,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal, CheckCircle } from 'lucide-react'; // Added CheckCircle for success
+import { Terminal, CheckCircle } from 'lucide-react';
 
 export default function SignupForm() {
-  // const router = useRouter(); // Uncomment if you plan to redirect
+  const router = useRouter();
   const [error, setError] = useState<string | undefined>("");
   const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
@@ -34,7 +34,7 @@ export default function SignupForm() {
       name: "",
       email: "",
       password: "",
-      confirmPassword: "", // This is validated client-side, not sent to backend
+      confirmPassword: "",
     },
   });
 
@@ -43,19 +43,16 @@ export default function SignupForm() {
     setSuccess("");
 
     startTransition(async () => {
-      console.log("[SignupForm] Signup form submitted. Values (excluding confirmPassword for backend):", {
+      console.log("[SignupForm] Signup form submitted. Values for registration:", {
         name: values.name,
         email: values.email,
-        password: values.password, // Password will be sent plain to your Next.js API route
+        // Password is not logged for security
       });
       try {
-        // This Next.js API route needs to be created.
-        // It will then call your Spring Boot backend's /api/v1/auth/register endpoint.
-        const response = await fetch('/api/auth/register', {
+        // Step 1: Register the user via your backend
+        const registerResponse = await fetch('/api/auth/register', { // Calls your Next.js API proxy
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          // Only send necessary fields to the backend (name, email, password)
-          // confirmPassword is for client-side validation only.
           body: JSON.stringify({
             name: values.name,
             email: values.email,
@@ -63,22 +60,50 @@ export default function SignupForm() {
           }),
         });
 
-        const data = await response.json();
+        const registerData = await registerResponse.json();
 
-        if (!response.ok) {
-          // Expecting backend to return a JSON with a 'message' field on error
-          setError(data.message || "An unexpected error occurred during registration.");
-          console.error("[SignupForm] Registration error from /api/auth/register:", data);
-        } else {
-          setSuccess(data.message || "Registration successful! You can now log in.");
-          console.log("[SignupForm] Registration successful:", data);
-          form.reset(); // Reset form on success
-          // Optional: Redirect to login page after a short delay or directly
-          // setTimeout(() => router.push('/login'), 2000);
+        if (!registerResponse.ok) {
+          setError(registerData.message || "An unexpected error occurred during registration.");
+          console.error("[SignupForm] Registration error from /api/auth/register:", registerData);
+          return; // Stop if registration failed
         }
-      } catch (err) {
-        setError("Failed to connect to the registration service. Please check your internet connection and try again.");
-        console.error("[SignupForm] Network or unexpected error during registration:", err);
+
+        // Registration was successful
+        console.log("[SignupForm] Registration successful via backend:", registerData);
+        form.reset();
+        setSuccess("Registration successful! Attempting to log you in...");
+
+        // Step 2: Attempt to automatically log in the user
+        console.log("[SignupForm] Attempting auto-login for:", values.email);
+        const loginResult = await signIn('credentials', {
+          redirect: false, // We handle the redirect manually
+          email: values.email,
+          password: values.password, // Use the password they just signed up with
+        });
+
+        if (loginResult?.ok && !loginResult?.error) {
+          console.log("[SignupForm] Auto-login successful after signup.");
+          setSuccess("Registration and login successful! Redirecting to dashboard...");
+          // Redirect to home page after a short delay
+          setTimeout(() => {
+            router.push('/home'); // Or your desired dashboard page
+            router.refresh(); // Optional: to refresh server components if needed
+          }, 1500);
+        } else {
+          // Auto-login failed, which is unexpected if registration was fine.
+          // Guide user to login manually.
+          console.error("[SignupForm] Auto-login failed after signup:", loginResult?.error);
+          setError(loginResult?.error || "Registration was successful, but auto-login failed. Please try logging in manually.");
+          setSuccess(""); // Clear initial success message
+          // Optionally redirect to login page after a delay
+          setTimeout(() => {
+            router.push('/login');
+          }, 3000);
+        }
+
+      } catch (err) { // Catch errors from the fetch call to /api/auth/register or other unexpected issues
+        setError("Failed to connect to the registration service. Please try again.");
+        console.error("[SignupForm] Network or unexpected error during registration process:", err);
       }
     });
   };
@@ -148,20 +173,20 @@ export default function SignupForm() {
           {error && (
             <Alert variant="destructive">
               <Terminal className="h-4 w-4" />
-              <AlertTitle>Registration Error</AlertTitle>
+              <AlertTitle>Error</AlertTitle>
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          {success && (
+          {success && !error && ( // Only show success if there's no overriding error
             <Alert variant="default" className="bg-green-100 dark:bg-green-900/30 border-green-500/50 text-green-700 dark:text-green-300">
-              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" /> {/* Using CheckCircle for success */}
-              <AlertTitle>Success!</AlertTitle>
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <AlertTitle>Processing...</AlertTitle>
               <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 
           <Button type="submit" className="w-full cursor-pointer" disabled={isPending}>
-            {isPending ? "Creating Account..." : "Create an Account"}
+            {isPending ? "Processing..." : "Create an Account"}
           </Button>
         </form>
       </Form>
