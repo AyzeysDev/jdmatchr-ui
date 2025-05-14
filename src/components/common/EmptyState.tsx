@@ -29,25 +29,29 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       className={cn(
         "container mx-auto", // Constrains width and centers the block
         "flex flex-col items-center justify-center text-center", // Centers content within the container
-        "min-h-[calc(100vh-16rem)] sm:min-h-[calc(100vh-20rem)]", // Ensures it takes up significant vertical space
+        // Match the min-height from your DesignPage if desired, or keep current for more flexibility
+        // "min-h-[calc(100vh-10rem)]", // Exact match to DesignPage
+        "min-h-[calc(100vh-16rem)] sm:min-h-[calc(100vh-20rem)]", // Current flexible height
         "px-4 py-8", // Standard padding
         className // Allow user-provided custom classes to override or extend
       )}
     >
       {/* Content is now directly inside the main styled container */}
       {Icon && (
-        <div className="mb-6 mx-auto h-16 w-16 text-primary animate-pulse">
+        <div className="mb-8 p-5 bg-primary/10 rounded-full text-primary animate-pulse duration-3000 ease-in-out">
           <Icon className="w-16 h-16 md:w-20 md:h-20" strokeWidth={1.25} />
         </div>
       )}
-      <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-5">
+      <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
         {title}
-      </h2>
-      {/* Description's width will be naturally constrained by the 'container's max-width */}
-      <p className="mt-4 text-lg text-muted-foreground">
+      </h1>
+      {/* Description's width will be naturally constrained by the 'container's max-width.
+          You can add an additional max-w-lg or max-w-md here if you want the paragraph
+          to be narrower than the overall container for very long descriptions.
+      */}
+      <p className="mt-4 text-muted-foreground text-base md:text-lg leading-relaxed mb-10">
         {description}
       </p>
-      <div className="mt-8">
       <Button
         asChild
         size="lg"
@@ -55,7 +59,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       >
         <Link href={ctaLink}>{ctaText}</Link>
       </Button>
-      </div>
     </div>
   );
 };
