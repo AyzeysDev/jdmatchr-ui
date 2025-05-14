@@ -1,277 +1,335 @@
-// // src/app/(dashboard)/insights/[id]/page.tsx
-// "use client";
+// src/app/(dashboard)/insights/[id]/page.tsx
+"use client";
 
-// import React, { useEffect, useState, useCallback } from 'react';
-// import { useParams, useRouter } from 'next/navigation';
-// import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Button } from '@/components/ui/button';
-// import { Badge } from "@/components/ui/badge";
-// import { Separator } from "@/components/ui/separator";
-// import { LoadingIndicator } from '@/components/common/LoadingIndicator';
-// import { AlertTriangle, CheckCircle, Lightbulb, ListChecks, MessageSquareWarning, Target, ArrowLeft, ExternalLink, FileText, CalendarDays } from 'lucide-react';
-// import { Progress } from "@/components/ui/progress"; // For match score visualization
-// import {
-//     Accordion,
-//     AccordionContent,
-//     AccordionItem,
-//     AccordionTrigger,
-// } from "@/components/ui/accordion";
+import React, { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { LoadingIndicator } from '@/components/common/LoadingComponent';
+import {
+    AlertTriangle, CheckCircle, Lightbulb, ListChecks, MessageSquareWarning,
+    Target, ArrowLeft, FileText, CalendarDays, PlusCircle
+} from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import { cn } from '@/lib/utils';
 
-// // Matches the structure of the 'keywordAnalysis' map in Spring Boot
-// interface KeywordAnalysisData {
-//   matchedKeywords?: string[];
-//   missingKeywords?: string[];
-//   keywordDensityScore?: number; // Example, if you add this
-// }
+// Matches the structure of the 'keywordAnalysis' map in your Spring Boot mock
+interface KeywordAnalysisData {
+  matchedKeywords?: string[];
+  missingKeywords?: string[];
+  keywordDensityScore?: number;
+}
 
-// // Matches the structure of the 'analysisResult' map in Spring Boot
-// interface AnalysisResultPayload {
-//   overallMatchScore?: string; // This is the string like "85.5%"
-//   keywordAnalysis?: KeywordAnalysisData;
-//   resumeSuggestions?: string[];
-//   interviewPreparationTopics?: string[];
-//   // Add other fields from your backend's analysisResult map
-//   suggestions?: string[]; // From your Postman example
-//   keywordMatches?: string[]; // From your Postman example
-//   overallSentiment?: string; // From your Postman example
-//   atsScoreRaw?: number; // From your Postman example (this is likely the numeric matchScore)
-// }
+// Matches the structure of the 'analysisResult' map from your backend response
+interface AnalysisResultPayload {
+  overallMatchScore?: string; // e.g., "67.0%"
+  keywordAnalysis?: KeywordAnalysisData;
+  resumeSuggestions?: string[]; // This was in service mock
+  suggestions?: string[];       // This was in Postman example response
+  interviewPreparationTopics?: string[];
+  keywordMatches?: string[];    // This was in Postman example response
+  missingKeywords?: string[];   // Added to match your code usage below
+  overallSentiment?: string;    // This was in Postman example response
+  atsScoreRaw?: number;         // This was in Postman example response
+  mockProcessingTimestamp?: string;
+}
 
-// // This is the main data structure for the page, matching InsightDetailDto
-// export interface InsightPageData {
-//   id: string;
-//   jobTitle: string;
-//   jobDescriptionSummary?: string | null;
-//   resumeFilename?: string | null;
-//   matchScore?: number | null; // The numeric score (e.g., 67.0)
-//   analysisResult: AnalysisResultPayload | null;
-//   analysisDate: string; // ISO string
-// }
+// This is the main data structure for the page, matching Spring Boot's InsightDetailDto
+export interface InsightPageData {
+  id?: string; 
+  insightId?: string;
+  jobTitle: string;
+  jobDescriptionSummary?: string | null;
+  resumeFilename?: string | null;
+  matchScore?: number | null;
+  analysisResult: AnalysisResultPayload | null;
+  analysisDate: string; // ISO string
+}
 
 // interface ApiErrorResponse {
 //     message: string;
 // }
 
-// // Helper component for displaying a list of items
-// const ListItem: React.FC<{ item: string; icon?: React.ElementType }> = ({ item, icon: Icon }) => (
-//   <li className="flex items-start space-x-2 py-1">
-//     {Icon && <Icon className="h-5 w-5 text-primary mt-0.5 shrink-0" />}
-//     <span>{item}</span>
-//   </li>
-// );
+const ListItem: React.FC<{ item: string; icon?: React.ElementType; className?: string }> = ({ 
+  item, 
+  icon: Icon, 
+  className 
+}) => (
+  <li className={cn("flex items-start space-x-2 py-1.5 text-sm md:text-base", className)}>
+    {Icon && <Icon className="h-5 w-5 text-primary mt-0.5 shrink-0" />}
+    <span>{item}</span>
+  </li>
+);
 
-// // Helper component for sections
-// const InsightSection: React.FC<{ title: string; icon?: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, icon: Icon, children, defaultOpen = false }) => (
-//   <Accordion type="single" collapsible defaultValue={defaultOpen ? "item-1" : undefined} className="w-full">
-//     <AccordionItem value="item-1" className="border-b border-border/60">
-//       <AccordionTrigger className="text-xl font-semibold hover:no-underline py-4">
-//         <div className="flex items-center space-x-3">
-//           {Icon && <Icon className="h-6 w-6 text-primary/80" />}
-//           <span>{title}</span>
-//         </div>
-//       </AccordionTrigger>
-//       <AccordionContent className="pt-2 pb-4 text-muted-foreground">
-//         {children}
-//       </AccordionContent>
-//     </AccordionItem>
-//   </Accordion>
-// );
+interface InsightSectionCardProps {
+  title: string;
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+  badgeText?: string;
+  badgeVariant?: "default" | "secondary" | "destructive" | "outline";
+}
 
+const InsightSectionCard: React.FC<InsightSectionCardProps> = ({ 
+  title, 
+  icon: Icon, 
+  children, 
+  defaultOpen = false, 
+  badgeText, 
+  badgeVariant 
+}) => (
+  <Card className="overflow-hidden shadow-md dark:border-slate-700">
+    <Accordion type="single" collapsible defaultValue={defaultOpen ? "item-1" : undefined} className="w-full">
+      <AccordionItem value="item-1" className="border-b-0">
+        <AccordionTrigger className="px-6 py-4 text-lg font-semibold hover:no-underline hover:bg-muted/50 dark:hover:bg-slate-800/60 transition-colors">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center space-x-3">
+              {Icon && <Icon className="h-6 w-6 text-primary/90" />}
+              <span>{title}</span>
+            </div>
+            {badgeText && <Badge variant={badgeVariant || "secondary"}>{badgeText}</Badge>}
+          </div>
+        </AccordionTrigger>
+        <AccordionContent className="pt-0 pb-6 px-6 text-muted-foreground">
+          {children}
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  </Card>
+);
 
-// export default function InsightDetailPage() {
-//   const router = useRouter();
-//   const params = useParams();
-//   const insightId = params?.id as string | undefined;
+export default function InsightDetailPage() {
+  const router = useRouter();
+  const params = useParams();
+  // Ensure params is an object and id is a string
+  const insightIdFromUrl = params?.id ? String(params.id) : undefined;
 
-//   const [insightData, setInsightData] = useState<InsightPageData | null>(null);
-//   const [isLoading, setIsLoading] = useState(true);
-//   const [error, setError] = useState<string | null>(null);
+  const [insightData, setInsightData] = useState<InsightPageData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-//   const fetchInsightDetail = useCallback(async (id: string) => {
-//     setIsLoading(true);
-//     setError(null);
-//     try {
-//       const response = await fetch(`/api/insights/detail/${id}`); // Calls your Next.js API route
-//       const responseData = await response.json();
+  const fetchInsightDetail = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/insights/detail/${id}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to parse error response" }));
+        throw new Error(errorData.message || `Failed to fetch insight details: ${response.statusText}`);
+      }
+      
+      const responseData = await response.json().catch(() => null);
+      
+      if (!responseData) {
+        throw new Error("Received empty or invalid data from API");
+      }
+      
+      setInsightData(responseData as InsightPageData);
+    } catch (err: unknown) {
+      console.error("Error fetching insight detail:", err);
+      if (err instanceof Error) setError(err.message);
+      else setError("An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-//       if (!response.ok) {
-//         const error = responseData as ApiErrorResponse;
-//         throw new Error(error.message || `Failed to fetch insight details: ${response.statusText}`);
-//       }
-//       setInsightData(responseData as InsightPageData);
-//     } catch (err: unknown) {
-//       console.error("Error fetching insight detail:", err);
-//       if (err instanceof Error) {
-//         setError(err.message);
-//       } else {
-//         setError("An unexpected error occurred while fetching insight details.");
-//       }
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, []);
+  useEffect(() => {
+    if (insightIdFromUrl) {
+      fetchInsightDetail(insightIdFromUrl);
+    } else {
+      setError("Insight ID not found in URL.");
+      setIsLoading(false);
+    }
+  }, [insightIdFromUrl, fetchInsightDetail]);
 
-//   useEffect(() => {
-//     if (insightId) {
-//       fetchInsightDetail(insightId);
-//     } else {
-//       // Handle case where ID might not be available initially (though App Router should provide it)
-//       setError("Insight ID not found in URL.");
-//       setIsLoading(false);
-//     }
-//   }, [insightId, fetchInsightDetail]);
+  const formatDate = (dateString: string) => {
+    try {
+      if (!dateString || isNaN(new Date(dateString).getTime())) return "N/A";
+      return new Date(dateString).toLocaleDateString(undefined, {
+        year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+    } catch (e: unknown) { 
+      console.error("Error formatting date:", e);
+      return dateString; 
+    }
+  };
 
-//   const formatDate = (dateString: string) => {
-//     try {
-//       if (!dateString || isNaN(new Date(dateString).getTime())) return "N/A";
-//       return new Date(dateString).toLocaleDateString(undefined, {
-//         year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-//       });
-//     } catch (e) { return dateString; }
-//   };
+  if (isLoading) {
+    return <LoadingIndicator message="Loading your insight report..." fullPage={true} />;
+  }
 
-//   if (isLoading) {
-//     return <LoadingIndicator message="Loading your insight report..." fullPage={true} />;
-//   }
+  if (error) {
+    return (
+      <div className="container mx-auto flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-4 py-8 text-center">
+        <AlertTriangle className="w-16 h-16 text-destructive mb-6" />
+        <h2 className="text-2xl font-semibold text-destructive mb-3">Failed to Load Insight</h2>
+        <p className="text-muted-foreground max-w-md mb-8">{error}</p>
+        <Button onClick={() => router.push('/history')} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
+        </Button>
+      </div>
+    );
+  }
 
-//   if (error) {
-//     return (
-//       <div className="container mx-auto flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-4 py-8 text-center">
-//         <AlertTriangle className="w-16 h-16 text-destructive mb-6" />
-//         <h2 className="text-2xl font-semibold text-destructive mb-3">Failed to Load Insight</h2>
-//         <p className="text-muted-foreground max-w-md mb-8">{error}</p>
-//         <Button onClick={() => router.push('/history')} variant="outline">
-//           <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-//         </Button>
-//       </div>
-//     );
-//   }
+  if (!insightData) {
+    return (
+      <div className="container mx-auto flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-4 py-8 text-center">
+        <FileText className="w-16 h-16 text-muted-foreground mb-6" />
+        <h2 className="text-2xl font-semibold text-foreground mb-3">Insight Not Found</h2>
+        <p className="text-muted-foreground max-w-md mb-8">The requested analysis report could not be found or you may not have permission to view it.</p>
+        <Button onClick={() => router.push('/history')} variant="outline">
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
+        </Button>
+      </div>
+    );
+  }
 
-//   if (!insightData) {
-//     // This case might be hit if fetch completes but data is null (e.g., 404 from backend handled by API route)
-//     return (
-//          <div className="container mx-auto flex min-h-[calc(100vh-16rem)] flex-col items-center justify-center px-4 py-8 text-center">
-//             <FileText className="w-16 h-16 text-muted-foreground mb-6" />
-//             <h2 className="text-2xl font-semibold text-foreground mb-3">Insight Not Found</h2>
-//             <p className="text-muted-foreground max-w-md mb-8">The requested analysis report could not be found or you may not have permission to view it.</p>
-//             <Button onClick={() => router.push('/history')} variant="outline">
-//              <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-//             </Button>
-//       </div>
-//     );
-//   }
+  const { jobTitle, matchScore, analysisResult, analysisDate, resumeFilename } = insightData;
+  
+  // Safely handle potential nullish values
+  const numericScore = matchScore ?? analysisResult?.atsScoreRaw ?? 0;
+  const displayScoreString = analysisResult?.overallMatchScore || `${numericScore.toFixed(1)}%`;
 
-//   const { jobTitle, matchScore, analysisResult, analysisDate, resumeFilename, jobDescriptionSummary } = insightData;
-//   const numericMatchScore = matchScore ?? analysisResult?.atsScoreRaw ?? 0;
+  // Safely extract arrays from analysisResult, providing empty arrays as fallbacks
+  const matchedKeywords = analysisResult?.keywordAnalysis?.matchedKeywords || 
+                          analysisResult?.keywordMatches || 
+                          [];
+  const missingKeywords = analysisResult?.keywordAnalysis?.missingKeywords || 
+                          analysisResult?.missingKeywords || 
+                          [];
+  const suggestions = analysisResult?.resumeSuggestions || 
+                      analysisResult?.suggestions || 
+                      [];
+  const interviewTopics = analysisResult?.interviewPreparationTopics || [];
 
+  return (
+    <div className="container mx-auto max-w-4xl py-6 px-4 md:px-6 lg:px-8 space-y-6 md:space-y-8">
+      <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-2 md:mb-4 print:hidden">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+      </Button>
 
-//   // Consolidate keywords and suggestions from potentially different structures in analysisResult
-//   const matchedKeywords = analysisResult?.keywordAnalysis?.matchedKeywords || analysisResult?.keywordMatches || [];
-//   const missingKeywords = analysisResult?.keywordAnalysis?.missingKeywords || analysisResult?.missingKeywords || [];
-//   const suggestions = analysisResult?.resumeSuggestions || analysisResult?.suggestions || [];
-//   const interviewTopics = analysisResult?.interviewPreparationTopics || [];
+      <Card className="shadow-xl dark:border-slate-700 overflow-hidden">
+        <CardHeader className="bg-muted/30 dark:bg-slate-800/50 p-6 border-b dark:border-slate-700">
+          <CardTitle className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
+            {jobTitle || "Untitled Job Analysis"}
+          </CardTitle>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-2">
+            {resumeFilename && resumeFilename !== "N/A" && (
+              <span className="flex items-center"><FileText className="mr-1.5 h-4 w-4" /> {resumeFilename}</span>
+            )}
+            <span className="flex items-center">
+              <CalendarDays className="mr-1.5 h-4 w-4" /> Analyzed: {formatDate(analysisDate)}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {/* Overall Score Section */}
+          <div className="text-center py-6 bg-gradient-to-br from-primary/10 to-background rounded-lg">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">
+              Overall Match Score
+            </p>
+            <div className="text-5xl md:text-7xl font-extrabold text-primary my-2">
+              {displayScoreString}
+            </div>
+            <Progress 
+              value={Math.max(0, Math.min(100, numericScore))} 
+              className="w-3/4 md:w-1/2 mx-auto h-2.5 my-4" 
+            />
+            {analysisResult?.overallSentiment && (
+              <Badge 
+                variant={numericScore > 75 ? "default" : numericScore > 50 ? "secondary" : "destructive"} 
+                className="text-sm"
+              >
+                {analysisResult.overallSentiment}
+              </Badge>
+            )}
+          </div>
 
+          <Separator className="my-6" />
 
-//   return (
-//     <div className="container mx-auto max-w-4xl py-8 px-4 md:px-6 lg:px-8 space-y-8">
-//       <header className="space-y-2 mb-8">
-//         <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-4">
-//           <ArrowLeft className="mr-2 h-4 w-4" /> Back
-//         </Button>
-//         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">{jobTitle}</h1>
-//         <div className="flex items-center space-x-3 text-sm text-muted-foreground">
-//           {resumeFilename && (
-//             <span className="flex items-center"><FileText className="mr-1.5 h-4 w-4" /> {resumeFilename}</span>
-//           )}
-//           <span className="flex items-center"><CalendarDays className="mr-1.5 h-4 w-4" /> Analyzed: {formatDate(analysisDate)}</span>
-//         </div>
-//       </header>
+          {/* Sections using Accordion */}
+          <InsightSectionCard 
+            title="Keyword Analysis" 
+            icon={ListChecks} 
+            defaultOpen={true} 
+            badgeText={analysisResult?.keywordAnalysis?.keywordDensityScore 
+              ? `${analysisResult.keywordAnalysis.keywordDensityScore}% Density` 
+              : undefined}
+          >
+            <div className="grid md:grid-cols-2 gap-x-6 gap-y-4">
+              <div>
+                <h4 className="font-semibold text-md mb-2 text-green-600 dark:text-green-400">
+                  Matched Keywords
+                </h4>
+                {matchedKeywords.length > 0 ? (
+                  <ul className="space-y-1">
+                    {matchedKeywords.map((keyword, index) => (
+                      <ListItem key={`match-${index}`} item={keyword} icon={CheckCircle} />
+                    ))}
+                  </ul>
+                ) : <p className="text-sm">No specific keyword matches highlighted.</p>}
+              </div>
+              <div>
+                <h4 className="font-semibold text-md mb-2 text-amber-600 dark:text-amber-400">
+                  Keywords to Consider
+                </h4>
+                {missingKeywords.length > 0 ? (
+                  <ul className="space-y-1">
+                    {missingKeywords.map((keyword, index) => (
+                      <ListItem key={`miss-${index}`} item={keyword} icon={MessageSquareWarning} />
+                    ))}
+                  </ul>
+                ) : <p className="text-sm">No critical missing keywords identified.</p>}
+              </div>
+            </div>
+          </InsightSectionCard>
 
-//       {/* Overall Score Section */}
-//       <Card className="shadow-lg">
-//         <CardHeader>
-//           <CardTitle className="text-2xl flex items-center">
-//             <Target className="mr-3 h-7 w-7 text-primary" /> Overall Match Score
-//           </CardTitle>
-//         </CardHeader>
-//         <CardContent className="space-y-4">
-//           <div className="text-6xl font-bold text-primary text-center my-4">
-//             {numericMatchScore.toFixed(1)}%
-//           </div>
-//           <Progress value={numericMatchScore} className="w-full h-3" />
-//           <p className="text-center text-muted-foreground">
-//             {analysisResult?.overallSentiment || (numericMatchScore >= 80 ? "Strong Match!" : numericMatchScore >=60 ? "Good Potential" : "Needs Improvement")}
-//           </p>
-//         </CardContent>
-//       </Card>
+          {suggestions.length > 0 && (
+            <InsightSectionCard title="Resume & JD Suggestions" icon={Lightbulb} defaultOpen={true}>
+              <ul className="space-y-2">
+                {suggestions.map((suggestion, index) => (
+                  <ListItem key={`sug-${index}`} item={suggestion} icon={Lightbulb} />
+                ))}
+              </ul>
+            </InsightSectionCard>
+          )}
 
-//       {/* Keyword Analysis Section */}
-//       {(matchedKeywords.length > 0 || missingKeywords.length > 0) && (
-//         <InsightSection title="Keyword Analysis" icon={ListChecks} defaultOpen={true}>
-//           <div className="grid md:grid-cols-2 gap-6">
-//             <div>
-//               <h4 className="font-semibold text-lg mb-2 text-green-600 dark:text-green-400">Matched Keywords</h4>
-//               {matchedKeywords.length > 0 ? (
-//                 <ul className="space-y-1 list-inside">
-//                   {matchedKeywords.map((keyword, index) => (
-//                     <ListItem key={`match-${index}`} item={keyword} icon={CheckCircle} />
-//                   ))}
-//                 </ul>
-//               ) : <p>No specific keyword matches highlighted.</p>}
-//             </div>
-//             <div>
-//               <h4 className="font-semibold text-lg mb-2 text-amber-600 dark:text-amber-400">Missing Keywords</h4>
-//               {missingKeywords.length > 0 ? (
-//                 <ul className="space-y-1 list-inside">
-//                   {missingKeywords.map((keyword, index) => (
-//                     <ListItem key={`miss-${index}`} item={keyword} icon={MessageSquareWarning} />
-//                   ))}
-//                 </ul>
-//               ) : <p>No critical missing keywords identified.</p>}
-//             </div>
-//           </div>
-//           {analysisResult?.keywordAnalysis?.keywordDensityScore && (
-//             <p className="mt-4 text-sm">Keyword Density Score: {analysisResult.keywordAnalysis.keywordDensityScore}%</p>
-//           )}
-//         </InsightSection>
-//       )}
+          {interviewTopics.length > 0 && (
+            <InsightSectionCard title="Interview Preparation Focus" icon={Target}>
+              <ul className="space-y-2">
+                {interviewTopics.map((topic, index) => (
+                  <ListItem key={`prep-${index}`} item={topic} icon={CheckCircle} />
+                ))}
+              </ul>
+            </InsightSectionCard>
+          )}
 
-//       {/* Suggestions Section */}
-//       {suggestions.length > 0 && (
-//         <InsightSection title="Resume Suggestions" icon={Lightbulb} defaultOpen={true}>
-//           <ul className="space-y-2">
-//             {suggestions.map((suggestion, index) => (
-//               <ListItem key={`sug-${index}`} item={suggestion} icon={Lightbulb} />
-//             ))}
-//           </ul>
-//         </InsightSection>
-//       )}
+          {/* Raw Analysis Result (for debugging or full detail) - Optional */}
+          {process.env.NODE_ENV === 'development' && analysisResult && (
+            <InsightSectionCard title="Raw Analysis Data (Dev Only)" icon={AlertTriangle}>
+              <pre className="text-xs bg-muted/50 dark:bg-slate-800 p-4 rounded-md overflow-x-auto max-h-96">
+                {JSON.stringify(analysisResult, null, 2)}
+              </pre>
+            </InsightSectionCard>
+          )}
 
-//       {/* Interview Preparation Section */}
-//       {interviewTopics.length > 0 && (
-//         <InsightSection title="Interview Preparation Topics" icon={FileText}>
-//           <ul className="space-y-2">
-//             {interviewTopics.map((topic, index) => (
-//               <ListItem key={`prep-${index}`} item={topic} icon={CheckCircle} />
-//             ))}
-//           </ul>
-//         </InsightSection>
-//       )}
-
-//       {/* Raw Analysis Result (for debugging or full detail) - Optional */}
-//       {process.env.NODE_ENV === 'development' && analysisResult && (
-//         <InsightSection title="Raw Analysis Data (Dev Only)" icon={AlertTriangle}>
-//           <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
-//             {JSON.stringify(analysisResult, null, 2)}
-//           </pre>
-//         </InsightSection>
-//       )}
-
-//       <CardFooter className="mt-8 flex justify-center">
-//           <Button onClick={() => router.push('/analyze')}>
-//               <PlusCircle className="mr-2 h-4 w-4" /> Analyze Another JD
-//           </Button>
-//       </CardFooter>
-//     </div>
-//   );
-// }
+        </CardContent>
+        <CardFooter className="mt-6 p-6 border-t dark:border-slate-700 flex justify-center print:hidden">
+            <Button onClick={() => router.push('/analyze')} size="lg">
+                <PlusCircle className="mr-2 h-5 w-5" /> Analyze Another JD
+            </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
