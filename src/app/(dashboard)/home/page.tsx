@@ -40,7 +40,7 @@ export default async function HomePage() {
             <CardTitle className="text-xl font-semibold">
               New Analysis
             </CardTitle>
-            <FileSearch className="h-6 w-6 text-muted-foreground" />
+            <FileSearch className="h-6 w-6 text-blue-500" />
           </CardHeader>
           <CardContent className="flex flex-col flex-grow">
             <CardDescription className="mb-4">
@@ -60,7 +60,7 @@ export default async function HomePage() {
             <CardTitle className="text-xl font-semibold">
               View Insights
             </CardTitle>
-            <LineChart className="h-6 w-6 text-muted-foreground" />
+            <LineChart className="h-6 w-6 text-purple-500" />
           </CardHeader>
           <CardContent className="flex flex-col flex-grow">
             <CardDescription className="mb-4">
@@ -80,7 +80,7 @@ export default async function HomePage() {
                 <CardTitle className="text-xl font-semibold">
                     Analysis History
                 </CardTitle>
-                <History className="h-6 w-6 text-muted-foreground" />
+                <History className="h-6 w-6 text-orange-500" />
             </CardHeader>
             <CardContent className="flex flex-col flex-grow">
                 <CardDescription className="mb-4">
@@ -104,7 +104,7 @@ export default async function HomePage() {
                         BETA
                     </span>
                 </CardTitle>
-                <Wand2 className="h-6 w-6 text-muted-foreground" />
+                <Wand2 className="h-6 w-6 text-emerald-500" />
             </CardHeader>
             <CardContent className="flex flex-col flex-grow">
                 <CardDescription className="mb-4">
