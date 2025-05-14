@@ -17,8 +17,7 @@ export default function DesignPage() {
         This exciting new feature is currently under construction!
       </p>
       <p className="mt-2 text-muted-foreground">
-        Our team is hard at work crafting an amazing experience to help you design and optimize your application materials.
-        Stay tuned for updates!
+        🚀 Coming soon: Your personal design toolkit to make every application shine.
       </p>
       <div className="mt-8">
         <HardHat className="mx-auto h-12 w-12 text-amber-500" />

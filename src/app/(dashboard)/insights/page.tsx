@@ -1,150 +1,92 @@
 // src/app/(dashboard)/insights/page.tsx
-"use client"; // This page needs to be a client component to access context/client-side state
+"use client";
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-// import { AnalysisContext } from '@/contexts/AnalysisContext'; // Assuming you have this context
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+// import Link from 'next/link';
+import { EmptyState } from '@/components/common/EmptyState'; // Import the EmptyState component
+import { LineChart, Loader2, AlertTriangle } from 'lucide-react'; // Icons
 
-// Placeholder type for analysis results - replace with your actual type later
-interface AnalysisResult {
-  atsScore?: number;
-  benchmarkScore?: number;
-  suggestions?: string[]; // Array of suggestion strings
-  interviewGuide?: string[]; // Array of interview prep points
+interface LatestInsightResponse {
+  latestInsightId?: string | null; // UUID string or null
+  message?: string; // Optional error message
 }
 
-export default function InsightsPage() {
+export default function GenericInsightsPage() {
   const router = useRouter();
-  // const { analysisResults, clearAnalysisResults } = useContext(AnalysisContext); // Get results from context
   const [isLoading, setIsLoading] = useState(true);
-
-  // --- Mocked Data (Replace with Context/State) ---
-  const [mockResults, setMockResults] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Simulate fetching/checking context data
-    const timer = setTimeout(() => {
-      setMockResults({
-        atsScore: 82,
-        benchmarkScore: 90,
-        suggestions: [
-          "Add keywords like 'Cloud Deployment' and 'Microservices Architecture'.",
-          "Quantify achievements in previous roles (e.g., 'Increased efficiency by 15%').",
-          "Expand on project management experience mentioned in the job description.",
-          "Tailor the summary section to highlight relevant skills for this specific role.",
-        ],
-        interviewGuide: [
-          "Be prepared to discuss your experience with Agile methodologies.",
-          "Review common behavioral questions related to teamwork and problem-solving.",
-          "Research recent company news and be ready to ask insightful questions.",
-        ],
-      });
-      setIsLoading(false);
-    }, 500); // Simulate loading delay
+    const fetchLatestInsight = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // This Next.js API route will call your Spring Boot backend
+        const response = await fetch('/api/insights/get-latest-id'); // Create this API route
+        
+        if (!response.ok) {
+          const errorData: LatestInsightResponse = await response.json();
+          // If backend specifically says "not found" or "no content" for latest, it's not an error for this page's logic
+          if (response.status === 404 || response.status === 204) {
+             // No latest insight found, stay on this page to show empty state
+             setIsLoading(false);
+             return;
+          }
+          throw new Error(errorData.message || `Failed to fetch latest insight: ${response.statusText}`);
+        }
 
-    return () => clearTimeout(timer); // Cleanup timer
+        const data: LatestInsightResponse = await response.json();
 
+        if (data.latestInsightId) {
+          router.replace(`/insights/${data.latestInsightId}`);
+        } else {
+          // No latest insight found, stay on this page to show empty state
+          setIsLoading(false);
+        }
+      } catch (err: unknown) { // Changed from any to unknown
+        console.error("Error fetching latest insight ID:", err);
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("Could not load insights information due to an unexpected error.");
+        }
+        setIsLoading(false); // Stop loading on error
+      }
+    };
+
+    fetchLatestInsight();
   }, [router]);
 
-  if (isLoading || !mockResults) {
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-[60vh]">
-         <p className="text-muted-foreground">Loading analysis results...</p>
+      <div className="flex flex-col items-center justify-center text-center p-8 md:p-12 min-h-[calc(100vh-20rem)]">
+        <Loader2 className="w-12 h-12 mb-4 text-primary animate-spin" />
+        <p className="text-muted-foreground">Loading your insights...</p>
       </div>
     );
   }
 
-  const results = mockResults; // Using mocked data for now
+  if (error) {
+     return (
+      <div className="flex flex-col items-center justify-center text-center p-8 md:p-12 min-h-[calc(100vh-20rem)]">
+        <AlertTriangle className="w-12 h-12 text-destructive mb-4" />
+        <p className="text-destructive text-lg mb-2">Could not load insights.</p>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()} variant="outline">Try Again</Button>
+      </div>
+    );
+  }
 
-  const handleGoBack = () => {
-    // clearAnalysisResults?.(); // Optional: Clear results from context
-    router.push('/analyze'); // Navigate back to the analyze page
-  };
-
+  // This content is shown if isLoading is false AND there was no latestInsightId to redirect to AND no error
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
-      {/* Header section with Title and Back Button */}
-      <div className="flex items-center justify-between gap-4"> {/* Added gap-4 */}
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground">Analysis Insights</h1>
-          <p className="text-lg text-muted-foreground mt-1">
-            Here&apos;s the breakdown of your resume against the job description.
-          </p>
-        </div>
-        {/* Added cursor-pointer directly to the Button */}
-        <Button variant="outline" onClick={handleGoBack} className="cursor-pointer shrink-0"> {/* Added shrink-0 */}
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Analyze Another
-        </Button>
-      </div>
-
-      {/* Grid layout for key metrics */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">ATS Match Score</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{results.atsScore ?? 'N/A'}%</div>
-            <p className="text-xs text-muted-foreground">
-              Compared against the job description keywords.
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Target Benchmark</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{results.benchmarkScore ?? 'N/A'}+</div>
-            <p className="text-xs text-muted-foreground">
-              Recommended score for this role type.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Suggestions Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Resume Suggestions</CardTitle>
-          <CardDescription>Actionable tips to improve your resume&apos;s alignment.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {results.suggestions && results.suggestions.length > 0 ? (
-            <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-              {results.suggestions.map((suggestion, index) => (
-                <li key={index}>{suggestion}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">No specific suggestions provided.</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Interview Prep Guide Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Interview Prep Guide</CardTitle>
-          <CardDescription>Key areas and potential questions based on the job description.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {results.interviewGuide && results.interviewGuide.length > 0 ? (
-            <ul className="list-disc space-y-2 pl-5 text-muted-foreground">
-              {results.interviewGuide.map((guide, index) => (
-                <li key={index}>{guide}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">No specific interview guidance provided.</p>
-          )}
-        </CardContent>
-      </Card>
-
-    </div>
+    <EmptyState
+      Icon={LineChart} // Icon representing insights/analytics
+      title="Ready to Discover Your Resume's Potential ?"
+      description="Get AI-powered feedback on your resume! See your match score, find areas to improve, and get tailored suggestions for any job description."
+      ctaText="Start Your First Analysis"
+      ctaLink="/analyze"
+    />
   );
 }
