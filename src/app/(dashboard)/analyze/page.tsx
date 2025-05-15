@@ -172,8 +172,8 @@ export default function AnalyzePage() {
         </p>
       </div>
 
-      <Card className="flex-1 flex flex-col shadow-sm border-muted/30 dark:border-slate-800"> {/* Removed overflow-hidden */}
-        <CardContent className="px-6 pb-2"> {/* Adjusted padding: px-4 for left/right, pt-2 for a small top padding, pb-4 for bottom */}
+      <Card className="flex-1 flex flex-col shadow-sm border-muted/30 dark:border-slate-800 px-2 pt-3 pb-0"> {/* Removed overflow-hidden */}
+        <CardContent className="px-4 pt-2 pb-0"> {/* Adjusted padding: px-4 for left/right, pt-2 for a small top padding, pb-4 for bottom */}
           <form onSubmit={handleSubmit} id="analysis-form"> {/* Removed space-y-5 */}
             {/* Job Title */}
             <div className="space-y-1.5 mb-4"> {/* Added mb-4 for spacing between form groups */}
@@ -256,7 +256,7 @@ export default function AnalyzePage() {
           </form>
         </CardContent>
         
-        <CardFooter className="p-4 border-t flex justify-end"> {/* Consistent padding, added border-t for separation, and flex alignment */}
+        <CardFooter className="pt-6 flex justify-end"> {/* Consistent padding, added border-t for separation, and flex alignment */}
           <Button 
             type="submit"
             form="analysis-form"
