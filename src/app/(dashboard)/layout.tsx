@@ -3,36 +3,39 @@ import React from 'react';
 import { redirect } from 'next/navigation';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
-import { Sidebar } from '@/components/layout/SideBar'; // Import the Sidebar component
-import { MobileHeader } from '@/components/layout/MobileHeader'; // Import MobileHeader
+import { Sidebar } from '@/components/layout/SideBar';
+import { MobileHeader } from '@/components/layout/MobileHeader';
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // --- Authentication Check & Get Session (Server-Side) ---
-  const session = await getServerSession(authOptions); // Already fetching session here
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) {
+    // Redirect to login, preserving the intended callback URL
     redirect('/login?callbackUrl=/home');
   }
-  // --- End Authentication Check ---
 
   return (
-    <div className="flex min-h-screen w-full bg-muted/40 dark:bg-slate-950">
-
-      {/* Pass the server-fetched session data as a prop to Sidebar */}
+    // Main container for the entire dashboard view
+    // h-screen: Sets height to 100% of the viewport height
+    // overflow-hidden: Prevents this container itself from scrolling
+    <div className="flex h-screen w-full overflow-hidden bg-muted/40 dark:bg-slate-950">
+      {/* Sidebar: Fixed width, its internal content will scroll if needed */}
       <Sidebar session={session} />
 
-      {/* Main Content Area */}
-      <div className="flex flex-col flex-1">
-        {/* Pass session to MobileHeader as well if it needs user info */}
-        <MobileHeader />
+      {/* Main content column: Takes remaining width and manages its own overflow */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Mobile Header: Fixed part of the main content column, does not scroll */}
+        <MobileHeader /> {/* Ensure MobileHeader has a defined height */}
 
-        {/* Page Content Wrapper */}
+        {/* Scrollable main content area */}
+        {/* flex-1: Allows this area to grow and take available vertical space */}
+        {/* overflow-y-auto: Enables vertical scrolling ONLY for this main area */}
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-          {children}
+          {children} {/* Page content (e.g., InsightDetailPage) renders here */}
         </main>
       </div>
     </div>
