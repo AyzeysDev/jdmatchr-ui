@@ -44,7 +44,7 @@ interface KeywordAnalysisData {
 
 // Matches the structure of the 'analysisResult' map from your backend response
 interface AnalysisResultPayload {
-  overallMatchScore?: string; // e.g., "67.0%"
+  overallMatchScore?: string;
   keywordAnalysis?: KeywordAnalysisData;
   resumeSuggestions?: string[];
   suggestions?: string[];
@@ -52,26 +52,25 @@ interface AnalysisResultPayload {
   keywordMatches?: string[];
   missingKeywords?: string[];
   overallSentiment?: string;
-  atsScoreRaw?: number;         // e.g. 76
+  atsScoreRaw?: number;
   mockProcessingTimestamp?: string;
   fluffyPhrasesCount?: number;
   fluffyPhrasesExamples?: string[];
   alignmentScores?: {
-    skills?: number; // 0-100
-    experience?: number; // 0-100
-    education?: number; // 0-100
-    keywords?: number; // 0-100
+    skills?: number;
+    experience?: number;
+    education?: number;
+    keywords?: number;
   };
-  roleFitPredictionData?: { // For Radar Chart
-    technicalSkills?: number; // 0-100
-    softSkills?: number; // 0-100
-    experienceLevel?: number; // 0-100
-    cultureFit?: number; // 0-100
+  roleFitPredictionData?: {
+    technicalSkills?: number;
+    softSkills?: number;
+    experienceLevel?: number;
+    cultureFit?: number;
   };
   jobDescriptionSummary?: string;
 }
 
-// This is the main data structure for the page
 export interface InsightPageData {
   id?: string;
   insightId?: string;
@@ -80,11 +79,9 @@ export interface InsightPageData {
   resumeFilename?: string | null;
   matchScore?: number | null;
   analysisResult: AnalysisResultPayload | null;
-  analysisDate: string; // ISO string
+  analysisDate: string;
 }
 
-
-// --- Helper Function to Format Date ---
 const formatDate = (dateString: string) => {
     try {
       if (!dateString || isNaN(new Date(dateString).getTime())) return "N/A";
@@ -97,24 +94,44 @@ const formatDate = (dateString: string) => {
     }
 };
 
-// --- Radial Chart Component for Scores ---
+// Helper function to get SVG FILL color class for the score TEXT
+const getScoreTextFillClass = (score: number): string => {
+  if (score >= 90) return "fill-green-700 dark:fill-green-500";
+  if (score >= 80) return "fill-green-600 dark:fill-green-400";
+  if (score >= 60) return "fill-orange-500 dark:fill-orange-400";
+  if (score >= 40) return "fill-yellow-500 dark:fill-yellow-400";
+  return "fill-red-600 dark:fill-red-500";
+};
+
+// Helper function to get HSL string for the radial BAR color based on score
+const getScoreBarColor = (score: number): string => {
+  if (score >= 90) return "hsl(120, 78.00%, 23.10%)"; // Dark Green
+  if (score >= 80) return "hsl(120, 60%, 45%)"; // Green
+  if (score >= 60) return "hsl(39, 90%, 50%)";  // Orange (e.g., hsl(39, 100%, 50%) is a bright orange)
+  if (score >= 40) return "hsl(54, 90%, 50%)";  // Yellow (e.g., hsl(54, 100%, 50%) is a bright yellow)
+  return "hsl(0, 70%, 50%)";                     // Red
+};
+
+
 interface ScoreRadialChartProps {
   score: number;
-  label: string;
-  title: string;
-  color: string;
-  chartConfig: ChartConfig;
+  label: string; // Unique key for chartConfig, e.g., "match-score-dynamic"
+  title: string; // Display title for tooltip, e.g., "Match Score"
+  chartConfig: ChartConfig; // Base config, will be extended
 }
 
-const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title, color, chartConfig }) => {
-  const chartData = [{ name: title, value: score, fill: color }];
+const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title, chartConfig }) => {
+  const barColor = getScoreBarColor(score); // Determine bar color based on score
+  const chartData = [{ name: title, value: score, fill: barColor }]; // Use dynamic barColor for the RadialBar
+
   const dynamicChartConfig: ChartConfig = {
     ...chartConfig,
     [label]: {
       label: title,
-      color: color,
+      color: barColor, // Use the dynamic barColor for tooltip consistency
     },
   };
+  const scoreTextFillClass = getScoreTextFillClass(score); // Get SVG fill class for the text
 
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -133,7 +150,7 @@ const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title
         >
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} axisLine={false} />
           <RadialBar
-            dataKey="value"
+            dataKey="value" // The 'fill' for this RadialBar is sourced from chartData[0].fill
             background={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
             cornerRadius={6}
           />
@@ -142,7 +159,7 @@ const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title
               y="50%"
               textAnchor="middle"
               dominantBaseline="middle"
-              className="fill-foreground text-3xl font-bold"
+              className={cn("text-3xl font-bold", scoreTextFillClass)}
           >
               {score}
           </text>
@@ -156,13 +173,12 @@ const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title
   );
 };
 
-
-// --- Radar Chart Component for Role Fit ---
 interface RoleFitRadarChartProps {
   data: Array<{ subject: string; value: number; fullMark: number }>;
   chartConfig: ChartConfig;
+  radarColor: string;
 }
-const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig }) => {
+const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig, radarColor }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ChartContainer
@@ -177,8 +193,8 @@ const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig
           <Radar
             name="Role Fit"
             dataKey="value"
-            stroke="hsl(var(--chart-1))"
-            fill="hsl(var(--chart-1))"
+            stroke={radarColor}
+            fill={radarColor}
             fillOpacity={0.6}
           />
         </RadarChart>
@@ -234,9 +250,6 @@ export default function InsightDetailPage() {
   }
   if (error) {
     return (
-      // This div will be centered by the <main> tag's flex properties if it's a direct child
-      // or by its own `mx-auto` if it's within a full-width block.
-      // For full page states, it's common to let the <main> tag center it.
       <div className="flex flex-col items-center justify-center text-center h-full">
         <AlertTriangle className="w-16 h-16 text-destructive mb-6" />
         <h2 className="text-2xl font-semibold text-destructive mb-3">Failed to Load Insight</h2>
@@ -272,6 +285,15 @@ export default function InsightDetailPage() {
     education: Math.floor(Math.random() * 40) + 60,
     keywords: Math.floor(Math.random() * 60) + 40,
   };
+  const progressBarColors = [
+    "[&>[data-slot=progress-indicator]]:bg-sky-500",
+    "[&>[data-slot=progress-indicator]]:bg-emerald-500",
+    "[&>[data-slot=progress-indicator]]:bg-amber-500",
+    "[&>[data-slot=progress-indicator]]:bg-rose-500",
+    "[&>[data-slot=progress-indicator]]:bg-indigo-500",
+    "[&>[data-slot=progress-indicator]]:bg-pink-500",
+  ];
+
 
   const roleFitData = [
     { subject: 'Tech Skills', value: analysisResult?.roleFitPredictionData?.technicalSkills ?? Math.floor(Math.random() * 30) + 70, fullMark: 100 },
@@ -282,17 +304,17 @@ export default function InsightDetailPage() {
 
   const scoreChartConfigBase = {} satisfies ChartConfig;
 
+  const roleFitRadarChartColor = "hsl(var(--chart-5))"; // Example: using chart-5 for radar
   const roleFitChartConfig = {
-    value: { label: "Score", color: "hsl(var(--chart-1))" },
-    "tech skills": { label: "Tech Skills", color: "hsl(var(--chart-1))" },
-    "soft skills": { label: "Soft Skills", color: "hsl(var(--chart-1))" },
-    "experience": { label: "Experience", color: "hsl(var(--chart-1))" },
-    "culture fit": { label: "Culture Fit", color: "hsl(var(--chart-1))" },
+    value: { label: "Score", color: roleFitRadarChartColor },
+    "tech skills": { label: "Tech Skills", color: roleFitRadarChartColor },
+    "soft skills": { label: "Soft Skills", color: roleFitRadarChartColor },
+    "experience": { label: "Experience", color: roleFitRadarChartColor },
+    "culture fit": { label: "Culture Fit", color: roleFitRadarChartColor },
   } satisfies ChartConfig;
 
+
   return (
-    // Removed container, max-w-6xl, and py-6. Padding is now handled by the <main> tag in layout.
-    // This div will take the width of its parent <main> and allow content to flow.
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
@@ -316,14 +338,12 @@ export default function InsightDetailPage() {
         </Button>
       </div>
 
-      {/* Main Grid for Dashboard Cards - This grid will expand to the width of its parent */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card for Match Score */}
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Match Score</CardTitle>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
-              <ScoreRadialChart score={displayMatchScore} label="match-score" title="Match Score" color="hsl(var(--chart-1))" chartConfig={scoreChartConfigBase} />
+              <ScoreRadialChart score={displayMatchScore} label="match-score-dynamic" title="Match Score" chartConfig={scoreChartConfigBase} />
             </div>
           </div>
           <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">
@@ -331,12 +351,11 @@ export default function InsightDetailPage() {
           </CardDescription>
         </Card>
 
-        {/* Card for ATS Score */}
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">ATS Score</CardTitle>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
-              <ScoreRadialChart score={atsScore} label="ats-score" title="ATS Score" color="hsl(var(--chart-2))" chartConfig={scoreChartConfigBase} />
+              <ScoreRadialChart score={atsScore} label="ats-score-dynamic" title="ATS Score" chartConfig={scoreChartConfigBase} />
             </div>
           </div>
           <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">
@@ -344,7 +363,6 @@ export default function InsightDetailPage() {
           </CardDescription>
         </Card>
 
-        {/* Card for Fluffy Detector */}
         <Card className="flex flex-col items-center justify-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-3 shrink-0">Fluffy Detector</CardTitle>
           <div className="flex flex-col items-center justify-center flex-grow">
@@ -368,7 +386,6 @@ export default function InsightDetailPage() {
           </div>
         </Card>
 
-        {/* Card for JD Analysis Summary */}
         <Card className="p-4 sm:p-6 min-h-[240px] sm:min-h-[280px] flex flex-col">
           <CardHeader className="p-0 mb-3">
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
@@ -382,7 +399,6 @@ export default function InsightDetailPage() {
           </CardContent>
         </Card>
 
-        {/* Card for JD-Resume Alignment */}
         <Card className="p-4 sm:p-6 min-h-[240px] sm:min-h-[280px] flex flex-col">
           <CardHeader className="p-0 mb-4">
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
@@ -390,24 +406,23 @@ export default function InsightDetailPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 space-y-3 flex-grow">
-            {Object.entries(alignmentScores).map(([key, value]) => (
+            {Object.entries(alignmentScores).map(([key, value], index) => (
               <div key={key}>
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs sm:text-sm font-medium capitalize text-foreground">{key}</span>
                   <span className="text-xs sm:text-sm text-muted-foreground">{value}%</span>
                 </div>
-                <Progress value={value} aria-label={`${key} alignment score`} />
+                <Progress value={value} aria-label={`${key} alignment score`} className={progressBarColors[index % progressBarColors.length]} />
               </div>
             ))}
           </CardContent>
         </Card>
 
-        {/* Card for Role Fit Prediction */}
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Role Fit Prediction</CardTitle>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[220px] sm:max-w-[250px] h-full max-h-[200px] sm:max-h-[220px]">
-              <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} />
+              <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} radarColor={roleFitRadarChartColor} />
             </div>
           </div>
           <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">
@@ -416,7 +431,6 @@ export default function InsightDetailPage() {
         </Card>
       </div>
 
-       {/* Optional Detailed Sections */}
        <div className="mt-8 space-y-6">
             {(analysisResult?.keywordAnalysis?.matchedKeywords?.length || analysisResult?.keywordAnalysis?.missingKeywords?.length) && (
                 <Card>
