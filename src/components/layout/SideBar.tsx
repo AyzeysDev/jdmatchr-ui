@@ -10,47 +10,40 @@ import {
   Home,
   FileSearch,
   LineChart,
-  History, // <-- Import History icon
-  Wand2,   // <-- Import Wand2 icon (or Sparkles, HardHat) for Design Studio
-  // Settings, // Example: if you have a settings page
-  // UserCircle, // Example: if you have a profile page
+  History,
+  Wand2,
 } from 'lucide-react';
 import SignOutButton from '@/components/features/auth/SignOutButton';
-import type { Session } from 'next-auth'; // Import Session type
+import type { Session } from 'next-auth';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from '@/components/common/ThemeToggle'; // Import ThemeToggle
+import { ThemeToggle } from '@/components/common/ThemeToggle';
 
-// Define the structure for sidebar navigation items
+// Define the structure for sidebar navigation items with color property
 interface SidebarNavItem {
   title: string;
   href: string;
-  icon: React.ElementType; // Lucide icon component
-  isBeta?: boolean; // Optional flag for beta features
+  icon: React.ElementType;
+  iconColor: string; // Add color property for the icon
+  isBeta?: boolean;
 }
 
-// Update the sidebar navigation items array
+// Update the sidebar navigation items array with colors
 const sidebarNavItems: SidebarNavItem[] = [
-  { title: "Home", href: "/home", icon: Home },
-  { title: "Analyze", href: "/analyze", icon: FileSearch },
-  { title: "Insights", href: "/insights", icon: LineChart },
-  // --- New Items Added ---
-  { title: "History", href: "/history", icon: History },
-  { title: "Design Studio", href: "/design", icon: Wand2, isBeta: true }, // Mark as BETA and PRO
-  // --- End New Items ---
-  // Example: Add other items like settings or profile if needed
-  // { title: "Settings", href: "/settings", icon: Settings },
+  { title: "Home", href: "/home", icon: Home, iconColor: "#f5bc42" },
+  { title: "Analyze", href: "/analyze", icon: FileSearch, iconColor: "text-blue-500" },
+  { title: "Insights", href: "/insights", icon: LineChart, iconColor: "text-purple-500" },
+  { title: "History", href: "/history", icon: History, iconColor: "text-orange-500" },
+  { title: "Design Studio", href: "/design", icon: Wand2, iconColor: "text-green-500", isBeta: true },
 ];
 
-// Define props for the Sidebar, including the session object
 interface SidebarProps {
-  session: Session | null; // Accept the session passed from the layout
+  session: Session | null;
 }
 
-export function Sidebar({ session }: SidebarProps) { // Destructure session from props
+export function Sidebar({ session }: SidebarProps) {
   const pathname = usePathname();
   const user = session?.user;
 
-  // Generate initials for Avatar Fallback using the prop session
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() :
                       user?.email ? user.email.charAt(0).toUpperCase() : '?';
 
@@ -58,10 +51,10 @@ export function Sidebar({ session }: SidebarProps) { // Destructure session from
     <div className="hidden md:flex md:flex-col md:w-64 border-r bg-background">
       <div className="flex h-full flex-col">
 
-        {/* Sidebar Header Section */}
+        {/* Sidebar Header Section - FileUser icon is now red */}
         <div data-sidebar="header" className="flex h-16 items-center justify-between border-b px-4 lg:px-6 shrink-0">
           <Link href="/home" className="flex items-center gap-2 font-semibold">
-            <FileUser className="h-6 w-6 text-primary" />
+            <FileUser className="h-6 w-6 text-red-500" />
             <span className="">JDMatchr</span>
           </Link>
           {/* Theme Toggle Button */}
@@ -73,7 +66,7 @@ export function Sidebar({ session }: SidebarProps) { // Destructure session from
           <nav className="grid items-start px-2 lg:px-4 gap-1">
             {sidebarNavItems.map((item) => (
               <Link
-                key={item.href} // Use href for key if titles might not be unique
+                key={item.href}
                 href={item.href}
                 className={cn(
                   buttonVariants({ variant: "ghost" }),
@@ -83,7 +76,11 @@ export function Sidebar({ session }: SidebarProps) { // Destructure session from
                     : "text-muted-foreground hover:text-foreground",
                 )}
               >
-                <item.icon className="h-4 w-4" />
+                {/* Apply the specific color to each icon */}
+                <item.icon className={cn("h-4 w-4", 
+  item.iconColor.startsWith("#") ? "" : item.iconColor)} 
+  style={item.iconColor.startsWith("#") ? {color: item.iconColor} : undefined}
+/>
                 {item.title}
                 {item.isBeta && (
                   <span className="ml-auto text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full">
@@ -97,8 +94,8 @@ export function Sidebar({ session }: SidebarProps) { // Destructure session from
 
         {/* Sidebar Footer Section */}
         <div data-sidebar="footer" className="px-2 lg:px-4 py-4 border-t shrink-0 space-y-2">
-            {/* User Info Row - Now uses the session prop */}
-            {user && ( // Check if user exists in the passed session prop
+            {/* User Info Row */}
+            {user && (
               <div className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium">
                 <Avatar className="h-8 w-8">
                     {user.image && <AvatarImage src={user.image} alt={user.name ?? ''} />}
@@ -109,7 +106,6 @@ export function Sidebar({ session }: SidebarProps) { // Destructure session from
                 </span>
               </div>
             )}
-            {/* SignOutButton still works as it uses useSession internally if needed, or just triggers signout */}
             <SignOutButton />
         </div>
 
