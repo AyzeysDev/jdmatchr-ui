@@ -5,9 +5,10 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FileText, Calendar, History as HistoryIconLucide, AlertTriangle } from 'lucide-react';
+import { FileText, Calendar, History as HistoryIconLucide, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { EmptyState } from '@/components/common/EmptyState'; // Ensure this path is correct
 import { LoadingIndicator } from '@/components/common/LoadingComponent'; // Import the new loading indicator
+import { cn } from '@/lib/utils'; // Import the cn utility
 
 // Define a type for an insight item from your backend
 interface Insight {
@@ -15,6 +16,7 @@ interface Insight {
   jobTitle: string;
   analysisDate: string; // ISO string from OffsetDateTime
   matchScore?: number; // Assuming this is what atsScore maps to
+  atsScore?: number; // Optional ATS score
   resumeFilename?: string;
 }
 
@@ -22,6 +24,21 @@ export default function HistoryPage() {
   const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper function to get an icon based on score
+  const getScoreIcon = (score: number | undefined | null, type: 'match' | 'ats'): React.ReactNode => {
+    if (score === null || score === undefined) return null;
+    const iconSize = "h-4 w-4"; // Standard icon size
+    if (type === 'match') {
+      if (score >= 80) return <TrendingUp className={cn(iconSize, "text-green-500")} />;
+      if (score < 60) return <TrendingDown className={cn(iconSize, "text-red-500")} />;
+    } else if (type === 'ats') {
+      if (score >= 70) return <TrendingUp className={cn(iconSize, "text-sky-500")} />;
+      if (score < 50) return <TrendingDown className={cn(iconSize, "text-rose-500")} />;
+    }
+    // For scores in the middle range, or if no specific up/down trend is desired
+    return <TrendingUp className={cn(iconSize, "text-muted-foreground opacity-60")} />;
+  };
 
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
@@ -120,19 +137,40 @@ export default function HistoryPage() {
           <Card key={insight.id} className="flex flex-col hover:shadow-xl transition-shadow duration-300 dark:border-slate-700 rounded-lg overflow-hidden">
             <CardHeader className="pb-4 bg-card/50 dark:bg-slate-800/30 p-5">
               <div className="flex items-center justify-between mb-2">
-                <FileText className="h-7 w-7 text-primary" />
-                {insight.matchScore !== undefined && insight.matchScore !== null && ( // Changed from atsScore
-                  <span
-                    className={`px-3 py-1 text-xs font-semibold rounded-full
-                      ${insight.matchScore >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-700 dark:text-green-100' :
-                      insight.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700 dark:text-yellow-100' :
-                      'bg-red-100 text-red-700 dark:bg-red-700 dark:text-red-100'}`}
-                  >
-                    {insight.matchScore.toFixed(0)}% Match {/* Assuming matchScore is 0-100 */}
-                  </span>
-                )}
+                <FileText className="h-7 w-7 text-red-500" />
+                <div className="flex items-center space-x-2">
+                  {/* Display match score with trend icon */}
+                  {insight.matchScore !== undefined && insight.matchScore !== null && (
+                    <div className="flex items-center gap-1">
+                      {getScoreIcon(insight.matchScore, 'match')}
+                      <span
+                        className={`px-2.5 py-0.5 text-xs font-semibold rounded-full
+                          ${insight.matchScore >= 80 ? 'bg-green-100 text-green-700 dark:bg-green-700/20 dark:text-green-300' :
+                          insight.matchScore >= 60 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-700/20 dark:text-yellow-300' :
+                          'bg-red-100 text-red-700 dark:bg-red-700/20 dark:text-red-300'}`}
+                      >
+                        {insight.matchScore.toFixed(0)}%
+                      </span>
+                    </div>
+                  )}
+                  
+                  {/* Display ATS score with trend icon if available */}
+                  {insight.atsScore !== undefined && insight.atsScore !== null && (
+                    <div className="flex items-center gap-1">
+                      {getScoreIcon(insight.atsScore, 'ats')}
+                      <span
+                        className={`px-2.5 py-0.5 text-xs font-semibold rounded-full
+                          ${insight.atsScore >= 70 ? 'bg-sky-100 text-sky-700 dark:bg-sky-700/20 dark:text-sky-300' :
+                          insight.atsScore >= 50 ? 'bg-blue-100 text-blue-700 dark:bg-blue-700/20 dark:text-blue-300' :
+                          'bg-rose-100 text-rose-700 dark:bg-rose-700/20 dark:text-rose-300'}`}
+                      >
+                        ATS {insight.atsScore}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
-              <CardTitle className="text-lg font-medium leading-tight truncate" title={insight.jobTitle}>
+              <CardTitle className="text-xl font-semibold leading-tight truncate" title={insight.jobTitle}>
                 {insight.jobTitle || "Untitled Analysis"}
               </CardTitle>
               {insight.resumeFilename && (
@@ -141,14 +179,16 @@ export default function HistoryPage() {
                 </CardDescription>
               )}
             </CardHeader>
-            <CardContent className="flex-grow flex flex-col justify-between pt-4 p-5">
+            <CardContent className="flex-grow flex flex-col justify-between p-5 pt-3">
               <div className="text-sm text-muted-foreground mb-4">
                 <Calendar className="inline-block mr-1.5 h-4 w-4 relative -top-px" />
                 Analyzed: {formatDate(insight.analysisDate)}
               </div>
-              <Button asChild variant="outline" className="w-full mt-auto">
-                <Link href={`/insights/${insight.id}`}>View Details</Link>
-              </Button>
+              <div className="pt-4 pb-1">
+                <Button asChild variant="outline" className="w-full bg-emerald-500 hover:bg-emerald-600 text-white dark:bg-emerald-600 dark:hover:bg-emerald-700 border-0 hover:text-white">
+                  <Link href={`/insights/${insight.id}`}>View Details</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}

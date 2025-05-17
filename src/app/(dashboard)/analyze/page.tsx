@@ -1,3 +1,4 @@
+// src/app/(dashboard)/analyze/page.tsx
 "use client";
 
 import React, { useState, useRef, ChangeEvent } from 'react';
@@ -21,7 +22,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, XCircle, UploadCloud, ArrowRight, Check } from 'lucide-react';
 import { toast } from "sonner";
 
-// Define the Zod schema for react-hook-form
 const analysisFormSchema = z.object({
   jobTitle: z.string()
     .min(1, { message: "Job title is required." })
@@ -35,36 +35,19 @@ const analysisFormSchema = z.object({
 
 type AnalysisFormValues = z.infer<typeof analysisFormSchema>;
 
-// Interfaces for API response handling
-interface AnalysisResultDetail {
-  overallMatchScore?: string;
-  keywordAnalysis?: {
-    matchedKeywords?: string[];
-    missingKeywords?: string[];
-    keywordDensityScore?: number;
-  };
-  resumeSuggestions?: string[];
-  interviewPreparationTopics?: string[];
-  mockProcessingTimestamp?: string;
-  suggestions?: string[];
-  keywordMatches?: string[];
-  overallSentiment?: string;
-  missingKeywords?: string[];
-  atsScoreRaw?: number;
+// Minimal interface for the expected successful response for THIS page's needs
+interface MinimalProcessResponse {
+  id: string;
+  // Only 'id' is strictly needed here for redirection.
+  // Other top-level fields from the full backend response could be added if used.
 }
 
-interface AnalysisSuccessResponse {
-  insightId: string;
-  jobTitle?: string;
-  matchScore?: number;
-  analysisResult?: AnalysisResultDetail;
-  analysisDate?: string;
-}
-
+// Interface for API error responses
 interface ApiErrorResponse {
   message: string;
   rawError?: string;
 }
+
 
 export default function AnalyzePage() {
   const router = useRouter();
@@ -82,7 +65,6 @@ export default function AnalyzePage() {
     mode: "onChange",
   });
 
-  // File handling logic
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -119,7 +101,6 @@ export default function AnalyzePage() {
     toast.info("Resume selection cleared.");
   };
 
-  // Form submission logic
   const onSubmit = async (data: AnalysisFormValues) => {
     if (!resumeFile) {
       toast.error("Missing Information", {
@@ -142,47 +123,57 @@ export default function AnalyzePage() {
         body: formData,
       });
 
-      const responseData = await response.json();
+      // response.json() returns a Promise<any>, so treat responseData as unknown initially
+      const responseData: unknown = await response.json();
+      console.log("[AnalyzePage onSubmit] Raw responseData from Next.js API route /api/analyze/process:", JSON.stringify(responseData, null, 2));
+
 
       if (!response.ok) {
-        const error = responseData as ApiErrorResponse;
-        console.error("Analysis submission failed:", error.message, error.rawError);
-        toast.error("Analysis Failed", {
+        // Assuming error response conforms to ApiErrorResponse or has a message property
+        const errorResponse = responseData as ApiErrorResponse;
+        console.error("Analysis submission failed via Next.js API route. Status:", response.status, "Response:", errorResponse);
+        toast.error(errorResponse?.message || "Analysis Failed", {
           id: toastId,
-          description: error.message || "Could not process your request. Please try again.",
-          duration: 5000,
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
-      const successData = responseData as AnalysisSuccessResponse;
-      console.log("Analysis successful, backend response:", successData);
-
-      if (!successData.insightId) {
-        console.error("Analysis response is missing 'insightId'. Response:", successData);
-        toast.error("Processing Error", {
-          id: toastId,
-          description: "Analysis completed, but couldn't get the result ID. Please contact support.",
+          description: `Server responded with status ${response.status}. Please check details and try again.`,
           duration: 7000,
         });
         setIsSubmitting(false);
         return;
       }
 
-      toast.success("Analysis Complete!", {
-        id: toastId,
-        description: "Redirecting to your new insight report...",
-        duration: 2000,
-      });
+      // Type guard to check if responseData is a valid MinimalProcessResponse
+      // Parameter 'res' is typed as 'unknown' for better type safety.
+      const isSuccessResponse = (res: unknown): res is MinimalProcessResponse => {
+        return typeof res === 'object' && res !== null && 'id' in res && typeof (res as MinimalProcessResponse).id === 'string' && (res as MinimalProcessResponse).id.trim() !== '';
+      };
 
-      setTimeout(() => {
-        router.push(`/insights/${successData.insightId}`);
-      }, 1500);
+      if (isSuccessResponse(responseData)) {
+        // Now TypeScript knows responseData is MinimalProcessResponse
+        const insightId = responseData.id;
+        console.log("[AnalyzePage onSubmit] Successfully found insightId:", insightId);
+
+        toast.success("Analysis Complete!", {
+          id: toastId,
+          description: "Redirecting to your new insight report...",
+          duration: 2000,
+        });
+
+        setTimeout(() => {
+          router.push(`/insights/${insightId}`);
+        }, 1500);
+      } else {
+        console.error("Analysis response OK, but missing a valid 'id' string or not matching MinimalProcessResponse. ResponseData:", responseData);
+        toast.error("Processing Error", {
+          id: toastId,
+          description: "Analysis completed, but the result ID was not found or the response format was unexpected. Please contact support.",
+          duration: 7000,
+        });
+        setIsSubmitting(false);
+      }
 
     } catch (error) {
-      console.error("Error submitting analysis form:", error);
-      const message = error instanceof Error ? error.message : "An unexpected error occurred.";
+      console.error("Error submitting analysis form (client-side fetch/JSON parse issue):", error);
+      const message = error instanceof Error ? error.message : "An unexpected error occurred during submission.";
       toast.error("Submission Error", {
         id: toastId,
         description: message,
@@ -193,15 +184,7 @@ export default function AnalyzePage() {
   };
 
   return (
-    // Flex container to manage height and scrolling within the page
-    // The parent <main> in DashboardLayout provides the overall scroll context
-    // This aims to make the form area scrollable if it's too tall,
-    // rather than always making the entire dashboard main content scroll.
     <div className="flex flex-col" style={{ height: 'calc(100vh - var(--header-height, 4rem) - 2rem)' }}>
-      {/* Adjust --header-height based on your actual dashboard header height */}
-      {/* The -2rem is for top/bottom padding of the parent <main> or this component's own desired padding */}
-
-      {/* Page Header - stays fixed at the top of this component's view */}
       <div className="py-3 px-4 md:px-0 shrink-0">
         <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
           Analyze Your Fit
@@ -210,8 +193,6 @@ export default function AnalyzePage() {
           Upload your resume and paste a job description to get AI-powered insights.
         </p>
       </div>
-
-      {/* Form container - this will grow and scroll if content overflows */}
       <div className="flex-grow overflow-y-auto px-4 md:px-0 pb-6 pt-2">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -236,7 +217,6 @@ export default function AnalyzePage() {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="jobDescription"
@@ -247,7 +227,7 @@ export default function AnalyzePage() {
                     <Textarea
                       placeholder="Paste the full job description here..."
                       {...field}
-                      className="min-h-[150px] h-20 resize-y overflow-y-auto" // Fixed height, internal scroll
+                      className="min-h-[200px] h-60 resize-y overflow-y-auto"
                       disabled={isSubmitting}
                     />
                   </FormControl>
@@ -258,7 +238,6 @@ export default function AnalyzePage() {
                 </FormItem>
               )}
             />
-
             <FormItem>
               <FormLabel className="text-lg font-medium">Upload Resume</FormLabel>
               <FormControl>
@@ -313,9 +292,7 @@ export default function AnalyzePage() {
                 Only PDF files up to 5MB are accepted.
               </FormDescription>
             </FormItem>
-
-            {/* Submit Button Area - Aligned to the right */}
-            <div className="flex justify-left pt-4">
+            <div className="flex justify-end pt-4">
               <Button
                 type="submit"
                 className="px-6 font-medium h-10 text-sm"
