@@ -13,10 +13,18 @@ import {
     FileText,
     CalendarDays,
     PlusCircle,
-    BookOpen,
-    Link2,
-    Check, // Added Check icon import
+    Link2, 
+    Check,
+    // ChevronDown, 
+    // UserCheck, 
+    SearchCheck 
 } from 'lucide-react';
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
 import { cn } from '@/lib/utils';
 import {
     RadialBarChart,
@@ -36,7 +44,7 @@ import {
     ChartConfig
 } from "@/components/ui/chart";
 
-// --- Updated TypeScript Interfaces to match the new backend JSON structure ---
+// --- TypeScript Interfaces (remain unchanged) ---
 interface FluffDetectedItem {
   original: string;
   suggestion: string;
@@ -45,13 +53,6 @@ interface FluffDetectedItem {
 interface FluffAnalysisPayload {
   detected?: FluffDetectedItem[];
   summary?: string;
-}
-
-interface JDSummaryPayload {
-  summary?: string;
-  responsibilities?: string[];
-  requiredQualifications?: string[];
-  tone?: string;
 }
 
 interface RoleFitPredictionPayload {
@@ -64,7 +65,6 @@ interface RadarDataPayload {
   softSkills?: number;
   experienceLevel?: number;
   cultureFit?: number;
-  // locationFit?: number; // Optional
 }
 
 interface AlignmentBreakdownPayload {
@@ -87,14 +87,14 @@ interface KeywordAnalysisPayload {
 }
 
 interface AnalysisResultPayload {
+  matchScore: number;
+  atsScore: number;
   mockProcessingTimestamp?: string;
-  jdSummary?: JDSummaryPayload;
   fluffAnalysis?: FluffAnalysisPayload;
   roleFitAndAlignmentMetrics?: RoleFitAndAlignmentMetricsPayload;
   keywordAnalysis?: KeywordAnalysisPayload;
   resumeSuggestions?: string[];
   interviewPreparationTopics?: string[];
-  // overallSentiment?: string; // Optional
 }
 
 export interface InsightPageData {
@@ -102,11 +102,9 @@ export interface InsightPageData {
   jobTitle: string;
   resumeFilename?: string | null;
   createdAt: string;
-  matchScore: number;
-  atsScore: number;
-  analysisResult: AnalysisResultPayload | null; // analysisResult can still be null if the entire object is missing
+  analysisResult: AnalysisResultPayload | null;
 }
-// --- End of Updated TypeScript Interfaces ---
+// --- End of TypeScript Interfaces ---
 
 const formatDate = (dateString: string) => {
     try {
@@ -129,11 +127,11 @@ const getScoreTextFillClass = (score: number): string => {
 };
 
 const getScoreBarFillColor = (score: number): string => {
-  if (score >= 90) return "hsl(120, 60%, 35%)"; // Dark Green
-  if (score >= 80) return "hsl(120, 60%, 45%)"; // Green
-  if (score >= 60) return "hsl(39, 90%, 50%)";  // Orange
-  if (score >= 40) return "hsl(54, 90%, 50%)";  // Yellow
-  return "hsl(0, 70%, 50%)";                     // Red
+  if (score >= 90) return "hsl(120, 60%, 35%)";
+  if (score >= 80) return "hsl(120, 60%, 45%)";
+  if (score >= 60) return "hsl(39, 90%, 50%)";
+  if (score >= 40) return "hsl(54, 90%, 50%)";
+  return "hsl(0, 70%, 50%)";
 };
 
 interface ScoreRadialChartProps {
@@ -145,13 +143,8 @@ interface ScoreRadialChartProps {
 
 const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title, chartConfig }) => {
   const barFillColor = getScoreBarFillColor(score);
-  // Ensure the data object has the 'fill' property for the RadialBar to pick up
   const chartData = [{ name: title, value: score, fill: barFillColor }];
-
-  const dynamicChartConfig: ChartConfig = {
-    ...chartConfig,
-    [label]: { label: title, color: barFillColor },
-  };
+  const dynamicChartConfig: ChartConfig = { ...chartConfig, [label]: { label: title, color: barFillColor } };
   const scoreTextFillClass = getScoreTextFillClass(score);
 
   return (
@@ -160,7 +153,6 @@ const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title
         <RadialBarChart data={chartData} startAngle={90} endAngle={-270} innerRadius="70%" outerRadius="100%" barSize={12} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
           <PolarAngleAxis type="number" domain={[0, 100]} tick={false} axisLine={false} />
           <RadialBar dataKey="value" background={{ fill: "hsl(var(--muted))", opacity: 0.4 }} cornerRadius={6} isAnimationActive={false} />
-          {/* The fill for RadialBar is now sourced from chartData[0].fill */}
           <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className={cn("text-3xl font-bold", scoreTextFillClass)}>
             {score}
           </text>
@@ -211,7 +203,7 @@ export default function InsightDetailPage() {
         throw new Error(errorData.message || `Failed to fetch insight details: ${response.statusText}`);
       }
       const data: InsightPageData = await response.json();
-      if (!data || !data.analysisResult) { // Check for analysisResult specifically
+      if (!data || !data.analysisResult) {
         console.error("Incomplete data received from API:", data);
         throw new Error("Received incomplete or invalid data from API");
       }
@@ -234,63 +226,47 @@ export default function InsightDetailPage() {
     }
   }, [insightIdFromUrl, fetchInsightDetail]);
 
-  if (isLoading) {
-    return <LoadingIndicator message="Loading your insight report..." fullPage={true} />;
-  }
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center h-full">
-        <AlertTriangle className="w-16 h-16 text-destructive mb-6" />
-        <h2 className="text-2xl font-semibold text-destructive mb-3">Failed to Load Insight</h2>
-        <p className="text-muted-foreground max-w-md mb-8">{error}</p>
-        <Button onClick={() => router.push('/history')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-        </Button>
-      </div>
-    );
-  }
-  if (!insightData || !insightData.analysisResult) {
-    return (
-      <div className="flex flex-col items-center justify-center text-center h-full">
-        <FileText className="w-16 h-16 text-muted-foreground mb-6" />
-        <h2 className="text-2xl font-semibold text-foreground mb-3">Insight Data Incomplete</h2>
-        <p className="text-muted-foreground max-w-md mb-8">The requested report data is incomplete or could not be found.</p>
-        <Button onClick={() => router.push('/history')} variant="outline">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
-        </Button>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingIndicator message="Loading your insight report..." fullPage={true} />;
+  if (error) return (
+    <div className="flex flex-col items-center justify-center text-center h-full">
+      <AlertTriangle className="w-16 h-16 text-destructive mb-6" />
+      <h2 className="text-2xl font-semibold text-destructive mb-3">Failed to Load Insight</h2>
+      <p className="text-muted-foreground max-w-md mb-8">{error}</p>
+      <Button onClick={() => router.push('/history')} variant="outline">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
+      </Button>
+    </div>
+  );
+  if (!insightData || !insightData.analysisResult) return (
+    <div className="flex flex-col items-center justify-center text-center h-full">
+      <FileText className="w-16 h-16 text-muted-foreground mb-6" />
+      <h2 className="text-2xl font-semibold text-foreground mb-3">Insight Data Incomplete</h2>
+      <p className="text-muted-foreground max-w-md mb-8">The requested report data is incomplete or could not be found.</p>
+      <Button onClick={() => router.push('/history')} variant="outline">
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to History
+      </Button>
+    </div>
+  );
 
-  // Destructure with new top-level field names
-  // Removed 'id' from destructuring as it's not used in the rendering logic below
-  const { jobTitle, resumeFilename, createdAt, matchScore, atsScore, analysisResult } = insightData;
-
-  // Access nested data safely
-  const fluffAnalysis = analysisResult.fluffAnalysis;
+  const { jobTitle, resumeFilename, createdAt, analysisResult } = insightData;
+  const { matchScore, atsScore, fluffAnalysis, roleFitAndAlignmentMetrics, keywordAnalysis, resumeSuggestions, interviewPreparationTopics } = analysisResult;
   const fluffyPhrasesCount = fluffAnalysis?.detected?.length ?? 0;
   const hasFluff = fluffyPhrasesCount > 0;
-
-  const alignmentBreakdown = analysisResult.roleFitAndAlignmentMetrics?.alignmentBreakdown ?? {
-    skills: 0, experience: 0, education: 0, keywords: 0,
-  };
-   const progressBarColors = [
+  const alignmentBreakdown = roleFitAndAlignmentMetrics?.alignmentBreakdown ?? { skills: 0, experience: 0, education: 0, keywords: 0 };
+  const progressBarColors = [
     "[&>[data-slot=progress-indicator]]:bg-sky-500",
     "[&>[data-slot=progress-indicator]]:bg-emerald-500",
     "[&>[data-slot=progress-indicator]]:bg-amber-500",
     "[&>[data-slot=progress-indicator]]:bg-rose-500",
   ];
-
-  const radarMetrics = analysisResult.roleFitAndAlignmentMetrics?.radarData;
+  const radarMetrics = roleFitAndAlignmentMetrics?.radarData;
   const roleFitData = [
     { subject: 'Tech Skills', value: radarMetrics?.technicalSkills ?? 0, fullMark: 100 },
     { subject: 'Soft Skills', value: radarMetrics?.softSkills ?? 0, fullMark: 100 },
     { subject: 'Experience', value: radarMetrics?.experienceLevel ?? 0, fullMark: 100 },
     { subject: 'Culture Fit', value: radarMetrics?.cultureFit ?? 0, fullMark: 100 },
   ].filter(item => item.value > 0 || Object.keys(radarMetrics || {}).length === 0);
-
   const scoreChartConfigBase = {} satisfies ChartConfig;
-
   const roleFitRadarChartColor = "hsl(var(--chart-3))";
   const roleFitChartConfig = {
     value: { label: "Score", color: roleFitRadarChartColor },
@@ -324,6 +300,7 @@ export default function InsightDetailPage() {
         </Button>
       </div>
 
+      {/* First Row of Cards - Match Score, ATS Score, JD-Resume Alignment */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Match Score</CardTitle>
@@ -332,9 +309,7 @@ export default function InsightDetailPage() {
               <ScoreRadialChart score={matchScore} label="match-score" title="Match Score" chartConfig={scoreChartConfigBase} />
             </div>
           </div>
-          <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">
-            Your resumes alignment with the JD.
-          </CardDescription>
+          <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">Your resumes alignment with the JD.</CardDescription>
         </Card>
 
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
@@ -344,50 +319,10 @@ export default function InsightDetailPage() {
               <ScoreRadialChart score={atsScore} label="ats-score" title="ATS Score" chartConfig={scoreChartConfigBase} />
             </div>
           </div>
-          <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">
-            Estimated Applicant Tracking System score.
-          </CardDescription>
+          <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">Estimated Applicant Tracking System score.</CardDescription>
         </Card>
-
-        <Card className="flex flex-col items-center justify-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
-          <CardTitle className="text-base sm:text-lg font-semibold mb-3 shrink-0">Fluffy Detector</CardTitle>
-          <div className="flex flex-col items-center justify-center flex-grow">
-            {hasFluff ? (
-              <>
-                <AlertTriangle className="h-12 sm:h-16 w-12 sm:w-16 mb-3 sm:mb-4 text-amber-500" />
-                <p className="text-lg sm:text-xl font-semibold text-amber-600 dark:text-amber-400">
-                  {fluffyPhrasesCount} instance{fluffyPhrasesCount !== 1 && 's'} detected
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1 px-2">
-                    {fluffAnalysis?.summary || "Phrases with filler language found."}
-                </p>
-              </>
-            ) : (
-              <>
-                <Check className="h-12 sm:h-16 w-12 sm:w-16 mb-3 sm:mb-4 text-green-500" />
-                <p className="text-lg sm:text-xl font-semibold text-green-600 dark:text-green-400">Looking Good!</p>
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    {fluffAnalysis?.summary || "No significant filler language detected."}
-                </p>
-              </>
-            )}
-          </div>
-        </Card>
-
-        <Card className="p-4 sm:p-6 min-h-[240px] sm:min-h-[280px] flex flex-col">
-          <CardHeader className="p-0 mb-3">
-            <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
-                <BookOpen className="mr-2 h-5 w-5 text-primary"/> JD Analysis Summary
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0 flex-grow">
-            <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              {analysisResult.jdSummary?.summary || "Job description summary not available."}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="p-4 sm:p-6 min-h-[240px] sm:min-h-[280px] flex flex-col">
+        
+        <Card className="p-4 sm:p-6 min-h-[280px] sm:min-h-[320px] flex flex-col">
           <CardHeader className="p-0 mb-4">
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
                 <Link2 className="mr-2 h-5 w-5 text-primary"/> JD-Resume Alignment
@@ -407,61 +342,101 @@ export default function InsightDetailPage() {
             ))}
           </CardContent>
         </Card>
+      </div>
 
+      {/* Second Row of Cards - Role Fit Prediction, Fluffy Detector */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Role Fit Prediction</CardTitle>
-          {analysisResult.roleFitAndAlignmentMetrics?.prediction?.verdict && (
-            <div className={cn("mb-2 text-lg font-semibold", analysisResult.roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("strong") ? "text-green-600" : analysisResult.roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("moderate") ? "text-orange-500" : "text-red-500")}>
-                {analysisResult.roleFitAndAlignmentMetrics.prediction.verdict}
+          <CardContent className="p-0 flex flex-col items-center justify-center flex-grow w-full">
+            {roleFitAndAlignmentMetrics?.prediction?.verdict && (
+              <div className={cn("mb-1 text-lg font-semibold", roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("strong") ? "text-green-600" : roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("moderate") ? "text-orange-500" : "text-red-500")}>
+                  {roleFitAndAlignmentMetrics.prediction.verdict}
+              </div>
+            )}
+            <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-1 max-h-[180px] sm:max-h-[200px]">
+              <div className="w-full max-w-[220px] sm:max-w-[250px] h-full">
+                {roleFitData.length > 0 ? (
+                  <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} radarColor={roleFitRadarChartColor} />
+                ) : <p className="text-xs text-muted-foreground">Not enough data for role fit graph.</p>}
+              </div>
             </div>
-          )}
-          <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-1">
-            <div className="w-full max-w-[220px] sm:max-w-[250px] h-full max-h-[180px] sm:max-h-[200px]">
-              {roleFitData.length > 0 ? (
-                <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} radarColor={roleFitRadarChartColor} />
-              ) : <p className="text-xs text-muted-foreground">Not enough data for role fit graph.</p>}
-            </div>
-          </div>
-          {analysisResult.roleFitAndAlignmentMetrics?.prediction?.reason && (
-            <CardDescription className="mt-2 text-xs sm:text-sm shrink-0 px-2">
-                {analysisResult.roleFitAndAlignmentMetrics.prediction.reason}
-            </CardDescription>
-          )}
+            {roleFitAndAlignmentMetrics?.prediction?.reason && (
+              <CardDescription className="mt-1 text-xs sm:text-sm shrink-0 px-2">
+                  {roleFitAndAlignmentMetrics.prediction.reason}
+              </CardDescription>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="p-4 sm:p-6 flex flex-col min-h-[280px] sm:min-h-[320px]">
+            <CardHeader className="p-0 mb-3">
+                <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
+                     <SearchCheck className="mr-2 h-5 w-5 text-primary"/> Fluffy Detector
+                </CardTitle>
+                {fluffAnalysis?.summary && <CardDescription className="text-sm mt-1">{fluffAnalysis.summary}</CardDescription>}
+            </CardHeader>
+            {/* Removed overflow-y-auto from CardContent for Fluffy Detector to allow natural height expansion */}
+            <CardContent className="p-0 flex-grow"> 
+                {hasFluff ? (
+                    <Accordion type="single" collapsible className="w-full">
+                        {fluffAnalysis?.detected?.map((item, index) => (
+                            <AccordionItem value={`item-${index}`} key={index} className="border-b-0">
+                                <AccordionTrigger className="text-sm py-3 hover:no-underline [&[data-state=open]>svg]:text-primary">
+                                    <div className="flex items-center text-left">
+                                        <AlertTriangle className="h-4 w-4 mr-2 text-amber-500 shrink-0" />
+                                        <span className="font-medium">{item.original}</span>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent className="text-sm bg-muted/30 dark:bg-slate-800/50 p-3 rounded-md mt-1">
+                                    <strong>Suggestion:</strong> {item.suggestion}
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-center">
+                        <Check className="h-12 w-12 mb-2 text-green-500" />
+                        <p className="text-md font-semibold text-green-600 dark:text-green-400">Looking Good!</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {fluffAnalysis?.summary || "No significant filler language detected."}
+                        </p>
+                    </div>
+                )}
+            </CardContent>
         </Card>
       </div>
 
+      {/* Other Analysis Details */}
        <div className="mt-8 space-y-6">
-            {analysisResult.keywordAnalysis && (analysisResult.keywordAnalysis.matchedKeywords?.length || analysisResult.keywordAnalysis.missingKeywords?.length) && (
+            {keywordAnalysis && (keywordAnalysis.matchedKeywords?.length || keywordAnalysis.missingKeywords?.length) && (
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base sm:text-lg">Detailed Keyword Analysis</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle className="text-base sm:text-lg">Detailed Keyword Analysis</CardTitle></CardHeader>
                     <CardContent className="text-xs sm:text-sm">
-                        <p className="text-muted-foreground">Matched: {analysisResult.keywordAnalysis.matchedKeywords?.join(', ') || 'None'}</p>
-                        <p className="text-muted-foreground mt-2">Consider Adding: {analysisResult.keywordAnalysis.missingKeywords?.join(', ') || 'None'}</p>
+                        <p className="text-muted-foreground"><b>Matched:</b> {keywordAnalysis.matchedKeywords?.join(', ') || 'None'}</p>
+                        <p className="text-muted-foreground mt-2"><b>Consider Adding:</b> {keywordAnalysis.missingKeywords?.join(', ') || 'None'}</p>
+                        {typeof keywordAnalysis.keywordDensityScore === 'number' && (
+                             <p className="text-muted-foreground mt-2"><b>Keyword Density Score:</b> {keywordAnalysis.keywordDensityScore}%</p>
+                        )}
                     </CardContent>
                 </Card>
             )}
-            {analysisResult.resumeSuggestions && analysisResult.resumeSuggestions.length > 0 && (
+            {resumeSuggestions && resumeSuggestions.length > 0 && (
                  <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base sm:text-lg">Resume Suggestions</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle className="text-base sm:text-lg">Resume Suggestions</CardTitle></CardHeader>
                     <CardContent>
                         <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-                            {analysisResult.resumeSuggestions.map((s, i) => <li key={`sug-${i}`}>{s}</li>)}
+                            {resumeSuggestions.map((s, i) => <li key={`sug-${i}`}>{s}</li>)}
                         </ul>
                     </CardContent>
                 </Card>
             )}
-             {analysisResult.interviewPreparationTopics && analysisResult.interviewPreparationTopics.length > 0 && (
+             {interviewPreparationTopics && interviewPreparationTopics.length > 0 && (
                  <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base sm:text-lg">Interview Preparation Topics</CardTitle>
-                    </CardHeader>
+                    <CardHeader><CardTitle className="text-base sm:text-lg">Interview Preparation Topics</CardTitle></CardHeader>
                     <CardContent>
                         <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-                            {analysisResult.interviewPreparationTopics.map((s, i) => <li key={`topic-${i}`}>{s}</li>)}
+                            {interviewPreparationTopics.map((s, i) => <li key={`topic-${i}`}>{s}</li>)}
                         </ul>
                     </CardContent>
                 </Card>
