@@ -15,14 +15,15 @@ import {
     PlusCircle,
     Link2, 
     Check,
-    // ChevronDown, // As per user's last code
-    UserCheck, // Re-added for Role Fit Card title
+    UserCheck, 
     SearchCheck,
     Tags, 
     Lightbulb, 
     ClipboardCheck, 
     CheckCircle2, 
-    Zap, 
+    Zap,
+    Target, // Added for Match Score
+    Gauge,  // Added for ATS Score
 } from 'lucide-react';
 import {
     Accordion,
@@ -39,7 +40,6 @@ import {
     ResponsiveContainer,
     RadarChart,
     PolarGrid,
-    PolarRadiusAxis,
     Radar,
     Tooltip as RechartsTooltip,
 } from 'recharts';
@@ -172,18 +172,25 @@ const ScoreRadialChart: React.FC<ScoreRadialChartProps> = ({ score, label, title
 interface RoleFitRadarChartProps {
   data: Array<{ subject: string; value: number; fullMark: number }>;
   chartConfig: ChartConfig;
-  radarColor: string;
+  // radarColor: string; // radarColor will now be sourced from CSS variable --color-value
 }
-const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig, radarColor }) => {
+const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig }) => {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <ChartContainer config={chartConfig} className="mx-auto aspect-square w-full h-full">
         <RadarChart data={data} margin={{ top: 20, right: 30, bottom: 0, left: 30 }}>
           <ChartTooltip content={<ChartTooltipContent className="text-xs" />} />
-          <PolarGrid />
-          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10 }} />
-          <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={6} tick={{ fontSize: 8 }} />
-          <Radar name="Fit Score" dataKey="value" stroke={radarColor} fill={radarColor} fillOpacity={0.6} isAnimationActive={false}/>
+          <PolarGrid stroke="var(--color-value)" /> {/* Use CSS var for grid */}
+          <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "var(--color-axisLabel)" }} /> {/* Use a muted text color var */}
+          {/* <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={6} tick={{ fontSize: 8, fill: "var(--color-value)" }} /> */}
+          <Radar 
+            name="Fit Score" 
+            dataKey="value" 
+            stroke="var(--color-value)" // Use CSS variable set by ChartStyle
+            fill="var(--color-value)"   // Use CSS variable set by ChartStyle
+            fillOpacity={0.6} 
+            isAnimationActive={false}
+          />
         </RadarChart>
       </ChartContainer>
     </ResponsiveContainer>
@@ -273,14 +280,28 @@ export default function InsightDetailPage() {
     { subject: 'Culture Fit', value: radarMetrics?.cultureFit ?? 0, fullMark: 100 },
   ].filter(item => item.value > 0 || Object.keys(radarMetrics || {}).length === 0);
   const scoreChartConfigBase = {} satisfies ChartConfig;
-  const roleFitRadarChartColor = "hsl(var(--chart-3))";
-  const roleFitChartConfig = {
-    value: { label: "Score", color: roleFitRadarChartColor },
-    "tech skills": { label: "Tech Skills", color: roleFitRadarChartColor },
-    "soft skills": { label: "Soft Skills", color: roleFitRadarChartColor },
-    "experience": { label: "Experience", color: roleFitRadarChartColor },
-    "culture fit": { label: "Culture Fit", color: roleFitRadarChartColor },
-  } satisfies ChartConfig;
+  
+const roleFitChartConfig = {
+  value: { // For the radar polygon itself
+    label: "Score", 
+    color: "var(--chart-3)" 
+  },
+  axisLabel: { 
+    label: "Axis Labels",
+    theme: {
+      light: "hsl(var(--muted-foreground))", // Or "hsl(var(--foreground))" if you prefer darker text in light mode
+      dark: "var(--radar-axis-text-dark)",  // Use the new CSS variable for dark mode
+    },
+  },
+  gridLine: { 
+    label: "Grid Lines",
+    theme: {
+      light: "hsl(var(--border))", 
+      dark: "hsl(var(--border))", 
+    }
+  }
+} satisfies ChartConfig;
+
 
   return (
     <div className="space-y-6">
@@ -309,11 +330,16 @@ export default function InsightDetailPage() {
       {/* First Row of Cards - Match Score, ATS Score, JD-Resume Alignment */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className={cn(
-            "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
-            "bg-gradient-to-br from-blue-100 via-cyan-50 to-teal-30 dark:from-blue-300/70 dark:via-cyan-600/60 dark:to-teal-900/50",
+            "flex flex-col p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60",
             "shadow-lg hover:shadow-xl transition-shadow"
         )}>
-          <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Match Score</CardTitle>
+          <CardHeader className="p-0 mb-4">
+            <CardTitle className="text-base sm:text-lg font-semibold shrink-0 flex items-center text-green-700 dark:text-green-300">
+                <Target className="mr-2 h-5 w-5"/>
+                Match Score
+            </CardTitle>
+          </CardHeader>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
               <ScoreRadialChart score={matchScore} label="match-score" title="Match Score" chartConfig={scoreChartConfigBase} />
@@ -323,11 +349,16 @@ export default function InsightDetailPage() {
         </Card>
 
         <Card className={cn(
-            "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
-            "bg-gradient-to-br from-violet-100 via-purple-50 to-fuchsia-30 dark:from-violet-300/70 dark:via-purple-600/60 dark:to-fuchsia-900/50",
+            "flex flex-col p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60",
             "shadow-lg hover:shadow-xl transition-shadow"
         )}>
-          <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">ATS Score</CardTitle>
+          <CardHeader className="p-0 mb-4">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center text-orange-700 dark:text-orange-300">
+                <Gauge className="mr-2 h-5 w-5"/>
+                ATS Score
+            </CardTitle>
+          </CardHeader>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
               <ScoreRadialChart score={atsScore} label="ats-score" title="ATS Score" chartConfig={scoreChartConfigBase} />
@@ -338,12 +369,12 @@ export default function InsightDetailPage() {
         
         <Card className={cn(
             "p-4 sm:p-6 min-h-[280px] sm:min-h-[320px] flex flex-col",
-            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-800/90 dark:via-gray-800/80 dark:to-neutral-800/70",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60",
             "shadow-lg hover:shadow-xl transition-shadow"
         )}>
           <CardHeader className="p-0 mb-4">
-            <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
-                <Link2 className="mr-2 h-5 w-5 text-primary"/> JD-Resume Alignment
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center text-slate-700 dark:text-slate-300">
+                <Link2 className="mr-2 h-5 w-5 text-slate-600 dark:text-slate-400"/> JD-Resume Alignment
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 space-y-3 flex-grow">
@@ -364,28 +395,27 @@ export default function InsightDetailPage() {
 
       {/* Second Row of Cards - Role Fit Prediction, Fluffy Detector */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <Card className={cn(
-    "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
-    "bg-gradient-to-r from-purple-100 via-fuchsia-50 to-pink-100 dark:from-purple-900/40 dark:via-fuchsia-900/30 dark:to-pink-900/30",
-    "border border-purple-200/60 dark:border-purple-800/30",
-    "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300"
-)}>
-          <CardHeader className="p-0 mb-3 flex flex-col items-center w-full">
-            <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
-              <UserCheck className="mr-2 h-5 w-5 text-primary"/>
+        <Card className={cn(
+            "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60",
+            "shadow-lg hover:shadow-xl transition-shadow"
+        )}>
+          <CardHeader className="p-0 mb-3 flex w-full">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center text-blue-700 dark:text-blue-300">
+              <UserCheck className="mr-2 h-5 w-5 text-blue-600 dark:text-blue-400"/>
               Role Fit Prediction
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 flex flex-col items-center justify-center flex-grow w-full">
             {roleFitAndAlignmentMetrics?.prediction?.verdict && (
-              <div className={cn("mb-1 text-lg font-semibold", roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("strong") ? "text-green-600" : roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("moderate") ? "text-orange-500" : "text-red-500")}>
+              <div className={cn("mb-1 text-lg font-semibold", roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("strong") ? "text-green-600 dark:text-green-400" : roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("moderate") ? "text-orange-500 dark:text-orange-400" : "text-red-500 dark:text-red-400")}>
                   {roleFitAndAlignmentMetrics.prediction.verdict}
               </div>
             )}
             <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-1 max-h-[180px] sm:max-h-[200px]">
               <div className="w-full max-w-[220px] sm:max-w-[250px] h-full">
                 {roleFitData.length > 0 ? (
-                  <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} radarColor={roleFitRadarChartColor} />
+                  <RoleFitRadarChart data={roleFitData} chartConfig={roleFitChartConfig} />
                 ) : <p className="text-xs text-muted-foreground">Not enough data for role fit graph.</p>}
               </div>
             </div>
@@ -399,12 +429,12 @@ export default function InsightDetailPage() {
 
         <Card className={cn(
             "p-4 sm:p-6 flex flex-col min-h-[280px] sm:min-h-[320px]",
-            "bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-800/70 dark:via-yellow-800/60 dark:to-orange-800/50",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60",
             "shadow-lg hover:shadow-xl transition-shadow"
         )}>
             <CardHeader className="p-0 mb-3">
-                <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
-                     <SearchCheck className="mr-2 h-5 w-5 text-primary"/> Fluffy Detector
+                <CardTitle className="text-base sm:text-lg font-semibold flex items-center text-purple-700 dark:text-purple-300">
+                     <SearchCheck className="mr-2 h-5 w-5 text-purple-600 dark:text-purple-400"/> Fluffy Detector
                 </CardTitle>
                 {fluffAnalysis?.summary && <CardDescription className="text-sm mt-1">{fluffAnalysis.summary}</CardDescription>}
             </CardHeader>
@@ -441,32 +471,35 @@ export default function InsightDetailPage() {
       {/* MODERNIZED Other Analysis Details */}
        <div className="mt-8 space-y-6">
             {keywordAnalysis && (keywordAnalysis.matchedKeywords?.length || keywordAnalysis.missingKeywords?.length || typeof keywordAnalysis.keywordDensityScore === 'number') && (
-                <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/80 dark:via-indigo-800/80 dark:to-purple-800/80">
+                <Card className={cn(
+                    "shadow-lg hover:shadow-xl transition-shadow pt-4 pb-5 px-4 sm:pt-5 sm:pb-6 sm:px-5",
+                    "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60"
+                )}>
                     <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
-                        <Tags className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                        <CardTitle className="text-lg font-semibold text-blue-800 dark:text-blue-300">Keyword Analysis</CardTitle>
+                        <Tags className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+                        <CardTitle className="text-lg font-semibold text-blue-800 dark:text-blue-200">Keyword Analysis</CardTitle>
                     </CardHeader>
-                    <CardContent className="px-0 pb-0 text-sm space-y-3">
+                    <CardContent className="px-0 pb-0 text-sm space-y-4 pt-2">
                         <div>
-                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Matched Keywords:</h4>
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Matched Keywords:</h4>
                             {keywordAnalysis.matchedKeywords && keywordAnalysis.matchedKeywords.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
-                                    {keywordAnalysis.matchedKeywords.map(kw => <Badge key={kw} className="bg-green-100 text-green-700 border-green-300 dark:bg-green-700/30 dark:text-green-200 dark:border-green-600">{kw}</Badge>)}
+                                    {keywordAnalysis.matchedKeywords.map(kw => <Badge key={kw} className="bg-green-100 text-green-700 border-green-300 dark:bg-green-500/30 dark:text-green-200 dark:border-green-500/50">{kw}</Badge>)}
                                 </div>
                             ) : <p className="text-muted-foreground italic">None found.</p>}
                         </div>
                         <div>
-                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1.5 mt-3">Keywords to Consider:</h4>
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-200 mb-1.5 mt-3">Keywords to Consider:</h4>
                             {keywordAnalysis.missingKeywords && keywordAnalysis.missingKeywords.length > 0 ? (
                                 <div className="flex flex-wrap gap-2">
-                                    {keywordAnalysis.missingKeywords.map(kw => <Badge key={kw} variant="outline" className="border-amber-500 text-amber-700 dark:border-amber-400 dark:text-amber-300">{kw}</Badge>)}
+                                    {keywordAnalysis.missingKeywords.map(kw => <Badge key={kw} variant="outline" className="border-amber-500 text-amber-700 dark:border-amber-400 dark:text-amber-200">{kw}</Badge>)}
                                 </div>
                             ) : <p className="text-muted-foreground italic">None suggested.</p>}
                         </div>
                         {typeof keywordAnalysis.keywordDensityScore === 'number' && (
                              <div className="mt-3">
-                                <h4 className="font-semibold text-slate-700 dark:text-slate-300">Keyword Density Score:</h4>
-                                <p className="text-primary font-bold text-lg">{keywordAnalysis.keywordDensityScore}%</p>
+                                <h4 className="font-semibold text-slate-700 dark:text-slate-200">Keyword Density Score:</h4>
+                                <p className="text-blue-700 dark:text-blue-300 font-bold text-lg">{keywordAnalysis.keywordDensityScore}%</p>
                             </div>
                         )}
                     </CardContent>
@@ -474,12 +507,15 @@ export default function InsightDetailPage() {
             )}
 
             {resumeSuggestions && resumeSuggestions.length > 0 && (
-                 <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/80 dark:via-emerald-800/80 dark:to-teal-800/80">
+                 <Card className={cn(
+                    "shadow-lg hover:shadow-xl transition-shadow pt-4 pb-5 px-4 sm:pt-5 sm:pb-6 sm:px-5",
+                    "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60"
+                 )}>
                     <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
-                        <Lightbulb className="h-6 w-6 text-green-600 dark:text-green-400" />
-                        <CardTitle className="text-lg font-semibold text-green-800 dark:text-green-300">Resume Suggestions</CardTitle>
+                        <Lightbulb className="h-6 w-6 text-green-600 dark:text-green-300" />
+                        <CardTitle className="text-lg font-semibold text-green-800 dark:text-green-200">Resume Suggestions</CardTitle>
                     </CardHeader>
-                    <CardContent className="px-0 pb-0">
+                    <CardContent className="px-0 pb-0 pt-2">
                         <ul className="space-y-2.5 text-sm">
                             {resumeSuggestions.map((s, i) => (
                                 <li key={`sug-${i}`} className="flex items-start">
@@ -493,12 +529,15 @@ export default function InsightDetailPage() {
             )}
 
              {interviewPreparationTopics && interviewPreparationTopics.length > 0 && (
-                 <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-800/70 dark:via-amber-800/70 dark:to-orange-800/70">
+                 <Card className={cn(
+                    "shadow-lg hover:shadow-xl transition-shadow pt-4 pb-5 px-4 sm:pt-5 sm:pb-6 sm:px-5",
+                    "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-700/80 dark:via-gray-800/70 dark:to-neutral-800/60"
+                 )}>
                     <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
-                        <ClipboardCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
-                        <CardTitle className="text-lg font-semibold text-amber-800 dark:text-amber-300">Interview Preparation Topics</CardTitle>
+                        <ClipboardCheck className="h-6 w-6 text-amber-600 dark:text-amber-300" />
+                        <CardTitle className="text-lg font-semibold text-amber-800 dark:text-amber-200">Interview Preparation Topics</CardTitle>
                     </CardHeader>
-                    <CardContent className="px-0 pb-0">
+                    <CardContent className="px-0 pb-0 pt-2">
                         <ul className="space-y-2.5 text-sm">
                             {interviewPreparationTopics.map((s, i) => (
                                 <li key={`topic-${i}`} className="flex items-start">
