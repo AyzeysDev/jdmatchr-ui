@@ -15,9 +15,14 @@ import {
     PlusCircle,
     Link2, 
     Check,
-    // ChevronDown, 
-    // UserCheck, 
-    SearchCheck 
+    // ChevronDown, // As per your last provided code
+    UserCheck, // Added for Role Fit Prediction title
+    SearchCheck,
+    Tags, 
+    Lightbulb, 
+    ClipboardCheck, 
+    CheckCircle2, 
+    Zap, 
 } from 'lucide-react';
 import {
     Accordion,
@@ -25,6 +30,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Badge } from "@/components/ui/badge"; 
 import { cn } from '@/lib/utils';
 import {
     RadialBarChart,
@@ -44,7 +50,7 @@ import {
     ChartConfig
 } from "@/components/ui/chart";
 
-// --- TypeScript Interfaces (remain unchanged) ---
+// --- TypeScript Interfaces (Assumed to be the same as your last provided code) ---
 interface FluffDetectedItem {
   original: string;
   suggestion: string;
@@ -106,6 +112,7 @@ export interface InsightPageData {
 }
 // --- End of TypeScript Interfaces ---
 
+// ... (formatDate, getScoreTextFillClass, getScoreBarFillColor, ScoreRadialChart, RoleFitRadarChart components remain the same) ...
 const formatDate = (dateString: string) => {
     try {
       if (!dateString || isNaN(new Date(dateString).getTime())) return "N/A";
@@ -184,6 +191,7 @@ const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig
   );
 };
 
+
 export default function InsightDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -193,6 +201,7 @@ export default function InsightDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // ... (fetchInsightDetail and useEffect hooks remain the same) ...
   const fetchInsightDetail = useCallback(async (id: string) => {
     setIsLoading(true);
     setError(null);
@@ -248,6 +257,7 @@ export default function InsightDetailPage() {
     </div>
   );
 
+
   const { jobTitle, resumeFilename, createdAt, analysisResult } = insightData;
   const { matchScore, atsScore, fluffAnalysis, roleFitAndAlignmentMetrics, keywordAnalysis, resumeSuggestions, interviewPreparationTopics } = analysisResult;
   const fluffyPhrasesCount = fluffAnalysis?.detected?.length ?? 0;
@@ -278,6 +288,7 @@ export default function InsightDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Top section with title and buttons - remains the same */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-2 print:hidden">
@@ -347,7 +358,13 @@ export default function InsightDetailPage() {
       {/* Second Row of Cards - Role Fit Prediction, Fluffy Detector */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
-          <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Role Fit Prediction</CardTitle>
+          {/* Updated CardHeader and CardTitle for Role Fit Prediction */}
+          <CardHeader className="p-0 mb-3 flex flex-col items-center w-full">
+            <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
+              <UserCheck className="mr-2 h-5 w-5 text-primary"/>
+              Role Fit Prediction
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0 flex flex-col items-center justify-center flex-grow w-full">
             {roleFitAndAlignmentMetrics?.prediction?.verdict && (
               <div className={cn("mb-1 text-lg font-semibold", roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("strong") ? "text-green-600" : roleFitAndAlignmentMetrics.prediction.verdict.toLowerCase().includes("moderate") ? "text-orange-500" : "text-red-500")}>
@@ -376,7 +393,6 @@ export default function InsightDetailPage() {
                 </CardTitle>
                 {fluffAnalysis?.summary && <CardDescription className="text-sm mt-1">{fluffAnalysis.summary}</CardDescription>}
             </CardHeader>
-            {/* Removed overflow-y-auto from CardContent for Fluffy Detector to allow natural height expansion */}
             <CardContent className="p-0 flex-grow"> 
                 {hasFluff ? (
                     <Accordion type="single" collapsible className="w-full">
@@ -407,36 +423,74 @@ export default function InsightDetailPage() {
         </Card>
       </div>
 
-      {/* Other Analysis Details */}
-       <div className="mt-8 space-y-6">
-            {keywordAnalysis && (keywordAnalysis.matchedKeywords?.length || keywordAnalysis.missingKeywords?.length) && (
-                <Card>
-                    <CardHeader><CardTitle className="text-base sm:text-lg">Detailed Keyword Analysis</CardTitle></CardHeader>
-                    <CardContent className="text-xs sm:text-sm">
-                        <p className="text-muted-foreground"><b>Matched:</b> {keywordAnalysis.matchedKeywords?.join(', ') || 'None'}</p>
-                        <p className="text-muted-foreground mt-2"><b>Consider Adding:</b> {keywordAnalysis.missingKeywords?.join(', ') || 'None'}</p>
+      {/* MODERNIZED Other Analysis Details */}
+      <div className="mt-8 space-y-6">
+            {keywordAnalysis && (keywordAnalysis.matchedKeywords?.length || keywordAnalysis.missingKeywords?.length || typeof keywordAnalysis.keywordDensityScore === 'number') && (
+                <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/80 dark:via-indigo-800/80 dark:to-purple-800/80">
+                    <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
+                        <Tags className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        <CardTitle className="text-lg font-semibold text-blue-800 dark:text-blue-300">Keyword Analysis</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-0 text-sm space-y-3">
+                        <div>
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Matched Keywords:</h4>
+                            {keywordAnalysis.matchedKeywords && keywordAnalysis.matchedKeywords.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {keywordAnalysis.matchedKeywords.map(kw => <Badge key={kw} className="bg-green-100 text-green-700 border-green-300 dark:bg-green-700/30 dark:text-green-200 dark:border-green-600">{kw}</Badge>)}
+                                </div>
+                            ) : <p className="text-muted-foreground italic">None found.</p>}
+                        </div>
+                        <div>
+                            <h4 className="font-semibold text-slate-700 dark:text-slate-300 mb-1.5 mt-3">Keywords to Consider:</h4>
+                            {keywordAnalysis.missingKeywords && keywordAnalysis.missingKeywords.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {keywordAnalysis.missingKeywords.map(kw => <Badge key={kw} variant="outline" className="border-amber-500 text-amber-700 dark:border-amber-400 dark:text-amber-300">{kw}</Badge>)}
+                                </div>
+                            ) : <p className="text-muted-foreground italic">None suggested.</p>}
+                        </div>
                         {typeof keywordAnalysis.keywordDensityScore === 'number' && (
-                             <p className="text-muted-foreground mt-2"><b>Keyword Density Score:</b> {keywordAnalysis.keywordDensityScore}%</p>
+                             <div className="mt-3">
+                                <h4 className="font-semibold text-slate-700 dark:text-slate-300">Keyword Density Score:</h4>
+                                <p className="text-primary font-bold text-lg">{keywordAnalysis.keywordDensityScore}%</p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
             )}
+
             {resumeSuggestions && resumeSuggestions.length > 0 && (
-                 <Card>
-                    <CardHeader><CardTitle className="text-base sm:text-lg">Resume Suggestions</CardTitle></CardHeader>
-                    <CardContent>
-                        <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-                            {resumeSuggestions.map((s, i) => <li key={`sug-${i}`}>{s}</li>)}
+                 <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/80 dark:via-emerald-800/80 dark:to-teal-800/80">
+                    <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
+                        <Lightbulb className="h-6 w-6 text-green-600 dark:text-green-400" />
+                        <CardTitle className="text-lg font-semibold text-green-800 dark:text-green-300">Resume Suggestions</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-0">
+                        <ul className="space-y-2.5 text-sm">
+                            {resumeSuggestions.map((s, i) => (
+                                <li key={`sug-${i}`} className="flex items-start">
+                                    <CheckCircle2 className="h-5 w-5 mr-2.5 mt-0.5 text-green-600 dark:text-green-400 shrink-0" />
+                                    <span className="text-slate-700 dark:text-slate-300">{s}</span>
+                                </li>
+                            ))}
                         </ul>
                     </CardContent>
                 </Card>
             )}
+
              {interviewPreparationTopics && interviewPreparationTopics.length > 0 && (
-                 <Card>
-                    <CardHeader><CardTitle className="text-base sm:text-lg">Interview Preparation Topics</CardTitle></CardHeader>
-                    <CardContent>
-                        <ul className="list-disc pl-5 space-y-1 text-xs sm:text-sm text-muted-foreground">
-                            {interviewPreparationTopics.map((s, i) => <li key={`topic-${i}`}>{s}</li>)}
+                 <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-50 dark:from-yellow-800/70 dark:via-amber-800/70 dark:to-orange-800/70">
+                    <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
+                        <ClipboardCheck className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        <CardTitle className="text-lg font-semibold text-amber-800 dark:text-amber-300">Interview Preparation Topics</CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-0 pb-0">
+                        <ul className="space-y-2.5 text-sm">
+                            {interviewPreparationTopics.map((s, i) => (
+                                <li key={`topic-${i}`} className="flex items-start">
+                                    <Zap className="h-5 w-5 mr-2.5 mt-0.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                                    <span className="text-slate-700 dark:text-slate-300">{s}</span>
+                                </li>
+                            ))}
                         </ul>
                     </CardContent>
                 </Card>
