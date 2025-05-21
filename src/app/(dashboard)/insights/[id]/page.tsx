@@ -15,8 +15,8 @@ import {
     PlusCircle,
     Link2, 
     Check,
-    // ChevronDown, // As per your last provided code
-    UserCheck, // Added for Role Fit Prediction title
+    // ChevronDown, // As per user's last code
+    UserCheck, // Re-added for Role Fit Card title
     SearchCheck,
     Tags, 
     Lightbulb, 
@@ -50,7 +50,7 @@ import {
     ChartConfig
 } from "@/components/ui/chart";
 
-// --- TypeScript Interfaces (Assumed to be the same as your last provided code) ---
+// --- TypeScript Interfaces (remain unchanged from your provided code) ---
 interface FluffDetectedItem {
   original: string;
   suggestion: string;
@@ -112,7 +112,6 @@ export interface InsightPageData {
 }
 // --- End of TypeScript Interfaces ---
 
-// ... (formatDate, getScoreTextFillClass, getScoreBarFillColor, ScoreRadialChart, RoleFitRadarChart components remain the same) ...
 const formatDate = (dateString: string) => {
     try {
       if (!dateString || isNaN(new Date(dateString).getTime())) return "N/A";
@@ -191,7 +190,6 @@ const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig
   );
 };
 
-
 export default function InsightDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -201,7 +199,6 @@ export default function InsightDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ... (fetchInsightDetail and useEffect hooks remain the same) ...
   const fetchInsightDetail = useCallback(async (id: string) => {
     setIsLoading(true);
     setError(null);
@@ -257,7 +254,6 @@ export default function InsightDetailPage() {
     </div>
   );
 
-
   const { jobTitle, resumeFilename, createdAt, analysisResult } = insightData;
   const { matchScore, atsScore, fluffAnalysis, roleFitAndAlignmentMetrics, keywordAnalysis, resumeSuggestions, interviewPreparationTopics } = analysisResult;
   const fluffyPhrasesCount = fluffAnalysis?.detected?.length ?? 0;
@@ -288,7 +284,6 @@ export default function InsightDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top section with title and buttons - remains the same */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
           <Button variant="outline" size="sm" onClick={() => router.back()} className="mb-2 print:hidden">
@@ -313,7 +308,11 @@ export default function InsightDetailPage() {
 
       {/* First Row of Cards - Match Score, ATS Score, JD-Resume Alignment */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
+        <Card className={cn(
+            "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-blue-100 via-cyan-50 to-teal-30 dark:from-blue-300/70 dark:via-cyan-600/60 dark:to-teal-900/50",
+            "shadow-lg hover:shadow-xl transition-shadow"
+        )}>
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">Match Score</CardTitle>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
@@ -323,7 +322,11 @@ export default function InsightDetailPage() {
           <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">Your resumes alignment with the JD.</CardDescription>
         </Card>
 
-        <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
+        <Card className={cn(
+            "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-violet-100 via-purple-50 to-fuchsia-30 dark:from-violet-300/70 dark:via-purple-600/60 dark:to-fuchsia-900/50",
+            "shadow-lg hover:shadow-xl transition-shadow"
+        )}>
           <CardTitle className="text-base sm:text-lg font-semibold mb-2 shrink-0">ATS Score</CardTitle>
           <div className="flex-grow w-full flex items-center justify-center overflow-hidden py-2">
             <div className="w-full max-w-[180px] sm:max-w-[200px] h-full max-h-[180px] sm:max-h-[200px]">
@@ -333,7 +336,11 @@ export default function InsightDetailPage() {
           <CardDescription className="mt-2 text-xs sm:text-sm shrink-0">Estimated Applicant Tracking System score.</CardDescription>
         </Card>
         
-        <Card className="p-4 sm:p-6 min-h-[280px] sm:min-h-[320px] flex flex-col">
+        <Card className={cn(
+            "p-4 sm:p-6 min-h-[280px] sm:min-h-[320px] flex flex-col",
+            "bg-gradient-to-br from-slate-100 via-gray-100 to-neutral-100 dark:from-slate-800/90 dark:via-gray-800/80 dark:to-neutral-800/70",
+            "shadow-lg hover:shadow-xl transition-shadow"
+        )}>
           <CardHeader className="p-0 mb-4">
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
                 <Link2 className="mr-2 h-5 w-5 text-primary"/> JD-Resume Alignment
@@ -357,8 +364,12 @@ export default function InsightDetailPage() {
 
       {/* Second Row of Cards - Role Fit Prediction, Fluffy Detector */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]">
-          {/* Updated CardHeader and CardTitle for Role Fit Prediction */}
+      <Card className={cn(
+    "flex flex-col items-center text-center p-4 sm:p-6 min-h-[280px] sm:min-h-[320px]",
+    "bg-gradient-to-r from-purple-100 via-fuchsia-50 to-pink-100 dark:from-purple-900/40 dark:via-fuchsia-900/30 dark:to-pink-900/30",
+    "border border-purple-200/60 dark:border-purple-800/30",
+    "shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.1)] transition-all duration-300"
+)}>
           <CardHeader className="p-0 mb-3 flex flex-col items-center w-full">
             <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
               <UserCheck className="mr-2 h-5 w-5 text-primary"/>
@@ -386,7 +397,11 @@ export default function InsightDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="p-4 sm:p-6 flex flex-col min-h-[280px] sm:min-h-[320px]">
+        <Card className={cn(
+            "p-4 sm:p-6 flex flex-col min-h-[280px] sm:min-h-[320px]",
+            "bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:from-amber-800/70 dark:via-yellow-800/60 dark:to-orange-800/50",
+            "shadow-lg hover:shadow-xl transition-shadow"
+        )}>
             <CardHeader className="p-0 mb-3">
                 <CardTitle className="text-base sm:text-lg font-semibold flex items-center">
                      <SearchCheck className="mr-2 h-5 w-5 text-primary"/> Fluffy Detector
@@ -424,7 +439,7 @@ export default function InsightDetailPage() {
       </div>
 
       {/* MODERNIZED Other Analysis Details */}
-      <div className="mt-8 space-y-6">
+       <div className="mt-8 space-y-6">
             {keywordAnalysis && (keywordAnalysis.matchedKeywords?.length || keywordAnalysis.missingKeywords?.length || typeof keywordAnalysis.keywordDensityScore === 'number') && (
                 <Card className="shadow-lg hover:shadow-xl transition-shadow p-5 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/80 dark:via-indigo-800/80 dark:to-purple-800/80">
                     <CardHeader className="flex flex-row items-center space-x-3 px-0 pt-0">
