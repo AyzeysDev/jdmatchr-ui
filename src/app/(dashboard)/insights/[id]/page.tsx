@@ -40,6 +40,7 @@ import {
     ResponsiveContainer,
     RadarChart,
     PolarGrid,
+    PolarRadiusAxis,
     Radar,
     Tooltip as RechartsTooltip,
 } from 'recharts';
@@ -182,7 +183,7 @@ const RoleFitRadarChart: React.FC<RoleFitRadarChartProps> = ({ data, chartConfig
           <ChartTooltip content={<ChartTooltipContent className="text-xs" />} />
           <PolarGrid stroke="var(--color-value)" /> {/* Use CSS var for grid */}
           <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "var(--color-axisLabel)" }} /> {/* Use a muted text color var */}
-          {/* <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={6} tick={{ fontSize: 8, fill: "var(--color-value)" }} /> */}
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tickCount={6} tick={{ fontSize: 8, fill: "var(--color-value)" }} />
           <Radar 
             name="Fit Score" 
             dataKey="value" 
